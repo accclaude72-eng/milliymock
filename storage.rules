@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Browsers may only CREATE objects in two tightly scoped places. Nothing is publicly
+// readable: files are served through short-lived URLs issued by authorised server routes.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // HTML test booklets — only the admin uploader token (custom claim admin=true).
+    match /materials/{uploadId}/{fileName} {
+      allow read: if false;
+      allow create: if request.auth != null
+        && request.auth.token.admin == true
+        && request.resource.size < 50 * 1024 * 1024
+        && request.resource.contentType.matches('text/html.*');
+    }
+
+    // O2 written-response files — only the signed-in candidate, only under their own uid.
+    match /submissions/{uid}/{attemptId}/{n}/{fileName} {
+      allow read: if false;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png)|application/pdf');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

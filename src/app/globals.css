@@ -1,26 +1,429 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * MILLIY MOCK — design tokens.
+ * Concept: the official answer sheet as an identity. Warm paper, ink-black rules,
+ * and one accent borrowed from OMR "drop-out" ink (vermilion). Light mode only.
+ */
+@theme {
+  --color-paper: #f3f0e8;
+  --color-paper-2: #ebe7dc;
+  --color-card: #fbfaf6;
+  --color-ink: #141412;
+  --color-ink-2: #34332f;
+  --color-muted: #66645c;
+  --color-hair: #cdc8ba;
+  --color-hair-2: #ddd8cb;
+  --color-accent: #b8321a;
+  --color-accent-ink: #8f2410;
+  --color-accent-soft: #f4dcd3;
+  --color-ok: #1d6643;
+  --color-ok-soft: #d9ebdf;
+  --color-warn: #8a5d00;
+  --color-warn-soft: #f4e6c4;
+  --color-info: #1f4a96;
+  --color-info-soft: #dbe4f4;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-serif: var(--font-newsreader), "Times New Roman", serif;
+  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --shadow-hard: 4px 4px 0 0 var(--color-ink);
+  --shadow-hard-sm: 2px 2px 0 0 var(--color-ink);
+  --shadow-hard-accent: 4px 4px 0 0 var(--color-accent);
+
+  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade: fade 0.35s ease both;
+  --animate-fill: fill 0.45s cubic-bezier(0.3, 0.8, 0.3, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes fill {
+    from {
+      transform: scale(0.2);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 }
 
+html {
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "tnum" 0;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@layer components {
+  /* ---------- typography ---------- */
+  .display {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- surfaces ---------- */
+  .sheet {
+    background: var(--color-card);
+    border: 1.5px solid var(--color-ink);
+    border-radius: 3px;
+  }
+  .sheet-hard {
+    background: var(--color-card);
+    border: 1.5px solid var(--color-ink);
+    border-radius: 3px;
+    box-shadow: var(--shadow-hard);
+  }
+  .rule {
+    border-top: 1.5px solid var(--color-ink);
+  }
+  .hair {
+    border-top: 1px solid var(--color-hair);
+  }
+  /* Registration / crop marks in the corners — the printed-form motif. */
+  .crop {
+    position: relative;
+  }
+  .crop::before,
+  .crop::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+  }
+  .crop::before {
+    top: -7px;
+    left: -7px;
+    border-top: 1.5px solid var(--color-ink);
+    border-left: 1.5px solid var(--color-ink);
+  }
+  .crop::after {
+    bottom: -7px;
+    right: -7px;
+    border-bottom: 1.5px solid var(--color-ink);
+    border-right: 1.5px solid var(--color-ink);
+  }
+
+  /* ---------- buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.55rem 1.1rem;
+    border: 1.5px solid var(--color-ink);
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.1;
+    background: var(--color-card);
+    color: var(--color-ink);
+    transition:
+      transform 0.12s ease,
+      box-shadow 0.12s ease,
+      background-color 0.15s ease;
+    box-shadow: var(--shadow-hard-sm);
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 0 var(--color-ink);
+  }
+  .btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0 0 0 0 var(--color-ink);
+  }
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-ink);
+  }
+  .btn-ink {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .btn-ghost {
+    box-shadow: none;
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    background: var(--color-paper-2);
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-sm {
+    min-height: 2.15rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  .btn-danger {
+    color: var(--color-accent-ink);
+    border-color: var(--color-accent-ink);
+  }
+
+  .link {
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+  }
+  .link:hover {
+    color: var(--color-accent);
+  }
+
+  /* ---------- forms ---------- */
+  .label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-2);
+    margin-bottom: 0.35rem;
+  }
+  .field {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.55rem 0.75rem;
+    border: 1.5px solid var(--color-ink);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--color-ink);
+    font-size: 1rem;
+    transition: box-shadow 0.12s ease;
+  }
+  .field:focus {
+    outline: none;
+    box-shadow: var(--shadow-hard-accent);
+  }
+  .field[aria-invalid="true"] {
+    border-color: var(--color-accent);
+  }
+  .field::placeholder {
+    color: #9a978c;
+  }
+  .field:disabled {
+    background: var(--color-paper-2);
+    color: var(--color-muted);
+  }
+
+  /* ---------- chips / status ---------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.12rem 0.5rem;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .chip-ok {
+    color: var(--color-ok);
+    background: var(--color-ok-soft);
+  }
+  .chip-warn {
+    color: var(--color-warn);
+    background: var(--color-warn-soft);
+  }
+  .chip-accent {
+    color: var(--color-accent-ink);
+    background: var(--color-accent-soft);
+  }
+  .chip-info {
+    color: var(--color-info);
+    background: var(--color-info-soft);
+  }
+  .chip-ink {
+    color: var(--color-ink);
+    background: var(--color-paper-2);
+  }
+
+  /* ---------- OMR bubble ---------- */
+  .bubble {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--color-accent);
+    color: var(--color-accent-ink);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 0.82rem;
+    background: #fff;
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease,
+      transform 0.1s ease;
+    cursor: pointer;
+  }
+  .bubble:hover {
+    background: var(--color-accent-soft);
+  }
+  .bubble[aria-checked="true"],
+  .bubble[data-filled="true"] {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .bubble:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .bubble-sm {
+    width: 1.45rem;
+    height: 1.45rem;
+    font-size: 0.66rem;
+  }
+
+  /* ---------- tables ---------- */
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .table th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1.5px solid var(--color-ink);
+    white-space: nowrap;
+  }
+  .table td {
+    padding: 0.7rem 0.75rem;
+    border-bottom: 1px solid var(--color-hair);
+    vertical-align: top;
+  }
+  .table tr:hover td {
+    background: rgba(20, 20, 18, 0.025);
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--color-paper-2) 0%, #f6f3ec 50%, var(--color-paper-2) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s infinite linear;
+    border-radius: 2px;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Graph-paper texture used sparingly (hero, empty states). */
+.graph-paper {
+  background-image:
+    linear-gradient(rgba(20, 20, 18, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 20, 18, 0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .sheet,
+  .sheet-hard {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  a {
+    text-decoration: none;
+  }
 }
