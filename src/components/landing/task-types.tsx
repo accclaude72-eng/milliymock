@@ -86,8 +86,8 @@ function O2Demo() {
   return (
     <div className="space-y-2 text-sm">
       {[
-        ["M", "Yechim usuli", 18, 20],
-        ["A", "Hisob-kitob", 7, 10],
+        ["M", "Mazmun va tuzilish", 18, 20],
+        ["A", "Til aniqligi", 7, 10],
       ].map(([c, l, s, m]) => (
         <div key={c as string}>
           <div className="flex justify-between font-mono text-xs">
@@ -103,7 +103,7 @@ function O2Demo() {
           </div>
         </div>
       ))}
-      <p className="font-mono text-[0.68rem] text-muted">Namuna rubrika · M va A hech qachon bitta “to‘g‘ri/noto‘g‘ri” ga birlashtirilmaydi</p>
+      <p className="font-mono text-[0.68rem] text-muted">Namuna mezonlar · ekspert har birini alohida baholaydi va izoh qoldiradi</p>
     </div>
   );
 }
@@ -120,7 +120,8 @@ export function TaskTypes() {
       <Card code="O1" title="Qisqa ochiq javob" desc="Son, formula yoki atama. O‘nlik vergul, kasr va Unicode belgilar me’yorlashtiriladi.">
         <O1Demo />
       </Card>
-      <Card code="O2" title="Yozma ish" desc="Biologiya va kimyoda. Yechim usuli (M) va hisob-kitob (A) rubrika bo‘yicha alohida baholanadi.">
+      <Card code="O2" title="Writing (yozma ish)" desc="Multilevel (English) Writing bo‘limida: xatlar va esse ekspert tomonidan mezonlar bo‘yicha baholanadi.">
+        {/* Milliy sertifikat tests on this platform no longer include a written part. */}
         <O2Demo />
       </Card>
     </div>

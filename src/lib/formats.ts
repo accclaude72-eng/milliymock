@@ -57,6 +57,8 @@ export interface ExamFormat {
   sections: FormatSection[];
   taskGroups: TaskGroup[];
   y1OptionCount: number;
+  /** Optional per-task option counts for Y1 (e.g. True/False/Not Given = 3, matching A–H = 8). */
+  y1OptionsByTask?: Record<string, number>;
   y2Scoring: Y2Scoring;
   /** Whether the Y2 scoring rule has been confirmed by an admin against the official source. */
   y2ScoringConfirmed: boolean;
@@ -243,21 +245,99 @@ export const DEFAULT_FORMATS: ExamFormat[] = [
   },
 ];
 
+/**
+ * Platform test format (2026) for Biology and Chemistry: the written part (41–43) is
+ * dropped — 40 tasks in one 100-minute stage. The official 2025 versions stay above for history.
+ */
+function fortyTaskVersion(base: ExamFormat, id: string): ExamFormat {
+  return {
+    ...base,
+    id,
+    version: "2026",
+    label: `${base.subjectName} · 40 ta topshiriq (100 daqiqa)`,
+    effectiveDate: "2026-11-28",
+    totalTasks: 40,
+    totalMinutes: 100,
+    sections: [{ id: "test", title: "Test topshiriqlari", from: 1, to: 40, minutes: 100 }],
+    taskGroups: [
+      { type: "Y1", from: 1, to: 32 },
+      { type: "Y2", from: 33, to: 35 },
+      { type: "O1", from: 36, to: 40 },
+    ],
+    o2Tasks: [],
+    assessmentNote:
+      "Platforma formati: 40 ta topshiriq (1–32 yopiq test, 33–35 moslashtirish, 36–40 qisqa javob), 100 daqiqa. Yozma ish (41–43) kiritilmagan. Natija xom ball sifatida ko‘rsatiladi.",
+  };
+}
+DEFAULT_FORMATS.push(
+  fortyTaskVersion(DEFAULT_FORMATS.find((f) => f.id === "biologiya-2025")!, "biologiya-2026"),
+  fortyTaskVersion(DEFAULT_FORMATS.find((f) => f.id === "kimyo-2025")!, "kimyo-2026"),
+  {
+    id: "multilevel-2026",
+    subjectCode: "multilevel",
+    subjectName: "Multilevel (English)",
+    version: "2026",
+    label: "Multilevel (CEFR) · Reading + Writing",
+    effectiveDate: "2026-11-28",
+    sourceUrl: "",
+    sourceTitle: "",
+    totalTasks: 38,
+    totalMinutes: 120,
+    sections: [
+      { id: "reading", title: "Reading", from: 1, to: 35, minutes: 60 },
+      { id: "writing", title: "Writing", from: 36, to: 38, minutes: 60 },
+    ],
+    taskGroups: [
+      { type: "O1", from: 1, to: 6 }, // Part 1 — gap filling (one word)
+      { type: "Y1", from: 7, to: 29 }, // Parts 2–4 — matching (A–H), headings (A–H), MCQ (A–D), True/False/Not Given
+      { type: "O1", from: 30, to: 32 }, // Part 5 — summary completion
+      { type: "Y1", from: 33, to: 35 }, // Part 5 — multiple choice
+      { type: "O2", from: 36, to: 38 }, // Writing — Task 1.1, Task 1.2, Task 2
+    ],
+    y1OptionCount: 4,
+    y1OptionsByTask: {
+      ...Object.fromEntries(range(7, 20).map((n) => [String(n), 8])), // matching / headings A–H
+      ...Object.fromEntries(range(25, 29).map((n) => [String(n), 3])), // A True · B False · C Not Given
+    },
+    y2Scoring: "per_pair",
+    y2ScoringConfirmed: false,
+    o2Tasks: [
+      { number: 36, maxScore: 10 },
+      { number: 37, maxScore: 15 },
+      { number: 38, maxScore: 25 },
+    ],
+    topics: [
+      "Reading — Part 1 (gap filling)",
+      "Reading — Part 2 (matching)",
+      "Reading — Part 3 (headings)",
+      "Reading — Part 4 (MCQ, True/False/Not Given)",
+      "Reading — Part 5 (summary, MCQ)",
+      "Writing — Task 1 (letters)",
+      "Writing — Task 2 (essay)",
+    ],
+    assessmentNote:
+      "Multilevel (CEFR) mock: Reading avtomatik baholanadi; Writing ekspert tomonidan mezonlar bo‘yicha baholanadi (M — mazmun va tuzilish, A — til aniqligi). Rasmiy CEFR darajasi va ball shkalasi platformada hisoblanmaydi.",
+    raschParameterSetId: null,
+    autoAdvanceSections: true,
+    status: "active",
+  },
+);
+
 export const DEFAULT_SUBJECTS: SubjectInfo[] = [
   {
     code: "biologiya",
     name: "Biologiya",
-    description: "Hujayradan biosferagacha: 40 ta test topshirig‘i va 3 ta yozma ish, ikki bosqichda.",
+    description: "Hujayradan biosferagacha: 40 ta topshiriq — yopiq test, moslashtirish va qisqa javob, 100 daqiqa.",
     order: 1,
-    activeFormatId: "biologiya-2025",
+    activeFormatId: "biologiya-2026",
     archived: false,
   },
   {
     code: "kimyo",
     name: "Kimyo",
-    description: "Umumiy, anorganik, organik kimyo va kimyoviy tahlil: test hamda 3 ta yozma masala.",
+    description: "Umumiy, anorganik, organik kimyo va kimyoviy tahlil: 40 ta topshiriq, 100 daqiqa.",
     order: 2,
-    activeFormatId: "kimyo-2025",
+    activeFormatId: "kimyo-2026",
     archived: false,
   },
   {
@@ -274,6 +354,14 @@ export const DEFAULT_SUBJECTS: SubjectInfo[] = [
     description: "Mexanikadan yadro fizikasigacha: 45 ta topshiriq, 150 daqiqa.",
     order: 4,
     activeFormatId: "fizika-2024",
+    archived: false,
+  },
+  {
+    code: "multilevel",
+    name: "Multilevel (English)",
+    description: "CEFR darajasidagi ingliz tili mock-testi: Reading (35 ta savol, 60 daqiqa) va Writing (3 ta topshiriq, 60 daqiqa).",
+    order: 5,
+    activeFormatId: "multilevel-2026",
     archived: false,
   },
 ];
@@ -342,6 +430,10 @@ export function validateFormat(f: ExamFormat): string[] {
   for (const n of o2Numbers) if (!f.o2Tasks.some((t) => t.number === n && t.maxScore > 0)) errs.push(`${n}-yozma topshiriq uchun maksimal ball kiritilmagan.`);
   for (const t of f.o2Tasks) if (!o2Numbers.includes(t.number)) errs.push(`${t.number} raqami O2 guruhida emas.`);
   if (f.y1OptionCount < 2 || f.y1OptionCount > 8) errs.push("Y1 variantlar soni 2–8 oralig‘ida bo‘lishi kerak.");
+  for (const [n, c] of Object.entries(f.y1OptionsByTask ?? {})) {
+    if (taskTypeOf(f, Number(n)) !== "Y1") errs.push(`${n}-topshiriq Y1 emas — alohida variantlar soni berib bo‘lmaydi.`);
+    if (!(c >= 2 && c <= 8)) errs.push(`${n}-topshiriq variantlari soni 2–8 oralig‘ida bo‘lishi kerak.`);
+  }
   return errs;
 }
 

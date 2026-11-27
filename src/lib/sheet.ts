@@ -9,7 +9,7 @@ export function buildSheet(format: ExamFormat, structure: MaterialStructure): Qu
   return taskNumbers(format).map((n) => {
     const type = taskTypeOf(format, n)!;
     const item: QuestionSheetItem = { n, type, section: sectionIndexOf(format, n) };
-    if (type === "Y1") item.options = structure.y1Options || format.y1OptionCount;
+    if (type === "Y1") item.options = structure.y1ByTask?.[String(n)] ?? (structure.y1Options || format.y1OptionCount);
     if (type === "Y2") {
       const y = structure.y2[String(n)] ?? DEFAULT_Y2;
       item.left = y.left;
@@ -23,7 +23,7 @@ export function buildSheet(format: ExamFormat, structure: MaterialStructure): Qu
 export function defaultStructure(format: ExamFormat): MaterialStructure {
   const y2: MaterialStructure["y2"] = {};
   for (const g of format.taskGroups) if (g.type === "Y2") for (const n of range(g.from, g.to)) y2[String(n)] = { ...DEFAULT_Y2 };
-  return { y1Options: format.y1OptionCount, y2 };
+  return { y1Options: format.y1OptionCount, y2, ...(format.y1OptionsByTask ? { y1ByTask: { ...format.y1OptionsByTask } } : {}) };
 }
 
 /** Checks an answer key against the format. Empty result = complete and consistent. */

@@ -112,7 +112,32 @@ export function PhysicsArt({ className }: { className?: string }) {
   );
 }
 
+/** English / CEFR: an open book whose lines write themselves, plus a speech bubble. */
+export function EnglishArt({ className }: { className?: string }) {
+  return (
+    <Frame label="Ingliz tili" className={className}>
+      <path d="M22 34 Q50 24 78 34 V100 Q50 90 22 100 Z" stroke={INK} strokeWidth="2" fill="var(--color-card)" />
+      <path d="M78 34 Q106 24 134 34 V100 Q106 90 78 100 Z" stroke={INK} strokeWidth="2" fill="var(--color-card)" />
+      {[0, 1, 2, 3, 4].map((i) => (
+        <g key={i}>
+          <line x1="30" y1={46 + i * 10} x2="70" y2={46 + i * 10} stroke={i === 2 ? ACCENT : INK} strokeWidth="1.4" strokeDasharray="40" strokeDashoffset="40">
+            <animate attributeName="stroke-dashoffset" values="40;0;0;40" keyTimes="0;0.3;0.85;1" dur="5s" begin={`${i * 0.35}s`} repeatCount="indefinite" />
+          </line>
+          <line x1="86" y1={46 + i * 10} x2="126" y2={46 + i * 10} stroke={INK} strokeWidth="1.4" opacity="0.5" />
+        </g>
+      ))}
+      <g className="float-y" style={{ animationDuration: "4s" }}>
+        <path d="M104 6 H150 V26 H122 L114 33 V26 H104 Z" fill={ACCENT} />
+        <text x="127" y="20" textAnchor="middle" fill="var(--color-paper)" fontFamily="var(--font-mono)" fontSize="10" fontWeight="600">
+          CEFR
+        </text>
+      </g>
+    </Frame>
+  );
+}
+
 const MAP: Record<string, (p: { className?: string }) => React.ReactElement> = {
+  multilevel: EnglishArt,
   biologiya: BiologyArt,
   kimyo: ChemistryArt,
   matematika: MathArt,

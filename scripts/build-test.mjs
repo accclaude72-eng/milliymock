@@ -31,6 +31,9 @@ const shuffle = (a) => {
 };
 const L = "ABCDEF";
 const twoStage = T.o2?.length > 0;
+// Total minutes for single-stage tests (Biology/Chemistry platform format = 100, Math/Physics = 150).
+const minutes = T.minutes ?? 150;
+const oLabel = ["biologiya", "kimyo"].includes(T.subjectCode) ? "O1" : "O";
 const esc = (s) => s; // data is trusted, authored HTML
 
 let n = 0;
@@ -38,7 +41,7 @@ const key = { y1: [], y2: {}, o1: {}, o2: {}, topics: {} };
 const addTopic = (num, t) => (key.topics[t] ??= []).push(num);
 const body = [];
 
-body.push(`<div class="stage">${twoStage ? "1-bosqich <small>1–40 · 100 daqiqa</small>" : `Test topshiriqlari <small>1–${T.y1.length + T.y2.length + T.o.length} · 150 daqiqa</small>`}</div>`);
+body.push(`<div class="stage">${twoStage ? "1-bosqich <small>1–40 · 100 daqiqa</small>" : `Test topshiriqlari <small>1–${T.y1.length + T.y2.length + T.o.length} · ${minutes} daqiqa</small>`}</div>`);
 body.push(`<div class="type">Y1 · bitta to‘g‘ri javobni belgilang</div>`);
 
 // balanced letter targets: each letter appears ~equally, order shuffled
@@ -64,7 +67,7 @@ for (const [topic, q, left, right] of T.y2) {
 <ol class="right" type="A">${order.map((k) => `<li>${esc(right[k])}</li>`).join("")}</ol></div></section>`);
 }
 
-body.push(`<div class="type">${twoStage ? "O1" : "O"} · qisqa javob yozing (son, formula yoki bitta atama)</div>`);
+body.push(`<div class="type">${oLabel} · faqat javobni yozing (son, formula yoki bitta atama)</div>`);
 for (const [topic, q, accepted, opt = {}] of T.o) {
   n++;
   key.o1[n] = { accepted, ...opt };
@@ -113,7 +116,7 @@ header h1{font:500 30px/1.1 Newsreader,serif;margin:4px 0 6px}
 </style></head>
 <body><main class="book">
 <header><div class="eyebrow">Milliy Mock · test kitobchasi</div><h1>${T.title}</h1>
-<div class="eyebrow">${T.formatLine} · ${total} ta topshiriq · ${twoStage ? "100 + 80" : "150"} daqiqa</div>
+<div class="eyebrow">${T.formatLine} · ${total} ta topshiriq · ${twoStage ? "100 + 80" : minutes} daqiqa</div>
 <ul class="rules">${(T.rules ?? []).map((r) => `<li>${r}</li>`).join("")}</ul></header>
 ${body.join("\n")}
 </main></body></html>`;

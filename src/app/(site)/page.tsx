@@ -12,7 +12,7 @@ const STEPS = [
   ["Ro‘yxatdan o‘ting", "Email orqali hisob oching. Tizim sizga noyob Candidate ID beradi — u har bir javoblar varaqasida ko‘rinadi."],
   ["Fan va variantni tanlang", "To‘liq mock, mavzu bo‘yicha mashq yoki qisqa diagnostika. Har bir variant fanning rasmiy format versiyasiga bog‘langan."],
   ["Kitobcha + javoblar varaqasi", "Chapda test kitobchasi, o‘ngda raqamli javoblar varaqasi. Vaqt serverda hisoblanadi, javoblar avtomatik saqlanadi."],
-  ["Tekshiruv", "Y1, Y2, O1 darhol avtomatik tekshiriladi. Shubhali qisqa javoblar va O2 yozma ishlar ekspertga yuboriladi."],
+  ["Tekshiruv", "Yopiq test, moslashtirish va qisqa javoblar darhol avtomatik tekshiriladi. Shubhali qisqa javoblar va Multilevel Writing ishlari ekspertga yuboriladi."],
   ["Tahlil", "Mavzular, topshiriq turlari va vaqt bo‘yicha natija. Zaif mavzularni qayta mashq qiling, oldingi urinishlar bilan solishtiring."],
 ];
 
@@ -30,8 +30,8 @@ const FAQ: [string, React.ReactNode][] = [
     "Javoblaringiz brauzerda navbatga yoziladi va aloqa tiklanishi bilan serverga yuboriladi. Vaqt server soati bo‘yicha hisoblanadi, shuning uchun sahifani yangilash yoki kompyuterni qayta yoqish taymerni to‘xtatmaydi va qayta boshlamaydi.",
   ],
   [
-    "O2 yozma ishlari qanday baholanadi?",
-    "Ekspert rubrika asosida yechim usuli (M) va hisob-kitob (A) ni alohida baholaydi, izoh qoldiradi. Matn muharririda yozishingiz yoki qo‘lda yozilgan yechimni JPG, PNG yoki PDF sifatida yuklashingiz mumkin. Ekspert tasdiqlamaguncha natija “yakuniy” deb belgilanmaydi.",
+    "Multilevel (English) Writing qanday baholanadi?",
+    "Writing topshiriqlarini ekspert mezonlar asosida baholaydi: mazmun va tuzilish (M) hamda til aniqligi (A) alohida, izoh bilan. Javobni matn maydonida yozasiz yoki qo‘lda yozilgan ishni JPG, PNG yoki PDF sifatida yuklaysiz. Ekspert tasdiqlamaguncha natija “yakuniy” deb belgilanmaydi. Reading esa darhol avtomatik tekshiriladi.",
   ],
   [
     "Format o‘zgarsa, eski natijalarim nima bo‘ladi?",
@@ -53,14 +53,14 @@ export default function Home() {
               <span className="inline-flex items-center gap-1.5 text-accent">
                 <span className="h-2 w-2 rounded-full bg-accent" /> Mustaqil mock-imtihon platformasi
               </span>
-              <span>Biologiya · Kimyo · Matematika · Fizika</span>
+              <span>Biologiya · Kimyo · Matematika · Fizika · Multilevel (English)</span>
             </p>
             <h1 className="display mt-6 text-[2.9rem] sm:text-6xl xl:text-[5.1rem]">
               Milliy sertifikatga <em className="text-accent">haqiqiy</em> imtihon formatida tayyorlaning
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-2">
-              Rasmiy spetsifikatsiyaga mos topshiriqlar tuzilishi, server vaqti bilan ishlaydigan taymer, avtomatik tekshiruv va yozma ishlarni ekspert
-              baholashi — bitta jiddiy platformada.
+              Milliy sertifikat formatidagi testlar va Multilevel (CEFR) ingliz tili mock-imtihonlari: server vaqti bilan ishlaydigan taymer,
+              avtomatik tekshiruv va Writing ishlarini ekspert baholashi — bitta jiddiy platformada.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/imtihonlar" className="btn btn-primary !min-h-12 !px-6 !text-base">
@@ -73,8 +73,8 @@ export default function Home() {
             <dl className="mt-12 grid max-w-xl grid-cols-2 border-t-[1.5px] border-ink sm:grid-cols-4">
               {(
                 [
-                  [[43], "topshiriq", "Biologiya, kimyo"],
-                  [[100, 80], "daqiqa", "ikki bosqich"],
+                  [[40], "topshiriq", "Biologiya, kimyo"],
+                  [[100], "daqiqa", "bitta bosqich"],
                   [[45], "topshiriq", "Matematika, fizika"],
                   [[150], "daqiqa", "bitta bosqich"],
                 ] as [number[], string, string][]
@@ -112,7 +112,7 @@ export default function Home() {
           <div className="marquee-track">
             {[0, 1].map((copy) => (
               <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
-                {["Y1 yopiq test", "Y2 moslashtirish", "O1 qisqa javob", "O2 yozma ish", "Server vaqti", "Avtosaqlash", "M / A rubrika", "Versiyalangan format", "Biologiya", "Kimyo", "Matematika", "Fizika"].map((t) => (
+                {["Y1 yopiq test", "Y2 moslashtirish", "O1 qisqa javob", "Server vaqti", "Avtosaqlash", "Versiyalangan format", "Biologiya", "Kimyo", "Matematika", "Fizika", "Multilevel · CEFR", "Reading", "Writing"].map((t) => (
                   <span key={t} className="flex shrink-0 items-center gap-8">
                     <span className="text-accent">◉</span>
                     {t}
@@ -193,7 +193,7 @@ export default function Home() {
               {[
                 ["Xom test natijasi", "to‘g‘ri / noto‘g‘ri / javobsiz va foiz", true],
                 ["Rasch balli", "faqat kalibrlangan parametrlar mavjud bo‘lsa", false],
-                ["O2 yozma ish ballari", "ekspert rubrikasi asosida, M va A alohida", true],
+                ["Writing ballari (Multilevel)", "ekspert mezonlari asosida, M va A alohida", true],
                 ["Taxminiy ko‘rsatkich", "faqat hisoblash modeli ochiq ko‘rsatilsa", false],
                 ["Rasmiy daraja", "faqat rasmiy shkala bo‘yicha ishonchli hisoblansa", false],
               ].map(([t, d, on], i) => (
@@ -262,8 +262,8 @@ export default function Home() {
                   <p className="mt-1 text-sm text-muted">Kalibratsiya ma’lumotlari mavjud emas — ko‘rsatilmaydi</p>
                 </div>
                 <div className="border-[1.5px] border-dashed border-ink/50 p-3">
-                  <p className="eyebrow !text-[0.6rem]">O2 yozma ish</p>
-                  <p className="mt-1 text-sm text-muted">Ekspert tekshiruvida — natija hali yakuniy emas</p>
+                  <p className="eyebrow !text-[0.6rem]">Qisqa javoblar</p>
+                  <p className="mt-1 text-sm text-muted">Shubhali javob yo‘q — barchasi avtomatik tekshirildi</p>
                 </div>
               </div>
             </div>

@@ -31,6 +31,27 @@ describe("official format seeds", () => {
       expect(validateFormat(f)).toEqual([]);
     }
   });
+  it("2026 platform formats: Biology/Chemistry 40 tasks in 100 min, no written part", () => {
+    for (const id of ["biologiya-2026", "kimyo-2026"]) {
+      const f = DEFAULT_FORMATS.find((x) => x.id === id)!;
+      expect(f.totalTasks).toBe(40);
+      expect(f.totalMinutes).toBe(100);
+      expect(f.sections).toHaveLength(1);
+      expect(f.o2Tasks).toEqual([]);
+      expect(f.taskGroups.map((g) => `${g.type}:${g.from}-${g.to}`)).toEqual(["Y1:1-32", "Y2:33-35", "O1:36-40"]);
+      expect(validateFormat(f)).toEqual([]);
+    }
+  });
+  it("Multilevel: Reading 35 + Writing 3, per-task option counts", () => {
+    const f = DEFAULT_FORMATS.find((x) => x.id === "multilevel-2026")!;
+    expect(validateFormat(f)).toEqual([]);
+    const sheet = buildSheet(f, defaultStructure(f));
+    expect(sheet).toHaveLength(38);
+    expect(sheet.find((s) => s.n === 10)?.options).toBe(8);
+    expect(sheet.find((s) => s.n === 22)?.options).toBe(4);
+    expect(sheet.find((s) => s.n === 27)?.options).toBe(3);
+    expect(sheet.filter((s) => s.type === "O2").map((s) => s.section)).toEqual([1, 1, 1]);
+  });
   it("no format claims a Rasch parameter set", () => {
     for (const f of DEFAULT_FORMATS) expect(f.raschParameterSetId).toBeNull();
   });

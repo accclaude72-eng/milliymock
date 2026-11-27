@@ -32,6 +32,8 @@ export interface Profile {
 
 export interface MaterialStructure {
   y1Options: number;
+  /** Per-task Y1 option counts overriding y1Options (copied from the format). */
+  y1ByTask?: Record<string, number>;
   /** Y2 layout per task number: number of left items and right options. */
   y2: Record<string, { left: number; right: number }>;
 }

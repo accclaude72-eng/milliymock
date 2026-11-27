@@ -49,6 +49,7 @@ export const KeySchema = z.record(z.string().regex(/^\d{1,3}$/), KeyItemSchema);
 
 export const StructureSchema = z.object({
   y1Options: z.number().int().min(2).max(8),
+  y1ByTask: z.record(z.string().regex(/^\d{1,3}$/), z.number().int().min(2).max(8)).optional(),
   y2: z.record(z.string().regex(/^\d{1,3}$/), z.object({ left: z.number().int().min(1).max(10), right: z.number().int().min(2).max(8) })),
 });
 
