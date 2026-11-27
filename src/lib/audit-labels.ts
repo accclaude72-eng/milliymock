@@ -17,4 +17,13 @@ export const ACTION_LABEL: Record<string, string> = {
   "subject.create": "Fan qo‘shildi",
   "subject.update": "Fan tahrirlandi",
   "site.theme": "Sayt dizayni o‘zgartirildi",
+  "site.payment": "To‘lov rekvizitlari o‘zgartirildi",
+  "payment.request": "To‘lov so‘rovi yuborildi",
+  "payment.approved": "To‘lov tasdiqlandi",
+  "payment.rejected": "To‘lov rad etildi",
+  "agent.task": "Agentga topshiriq berildi",
+  "agent.action": "Agent amal bajardi",
+  "agent.pending": "Agent tasdiq so‘radi",
+  "agent.confirmed": "Agent amali tasdiqlandi",
+  "agent.declined": "Agent amali rad etildi",
 };

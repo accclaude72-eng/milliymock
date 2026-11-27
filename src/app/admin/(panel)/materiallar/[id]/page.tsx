@@ -41,7 +41,7 @@ function EditMaterial() {
   const [m, setM] = useState<Material | null>(null);
   const [key, setKey] = useState<AnswerKey>({});
   const [structure, setStructure] = useState<MaterialStructure | null>(null);
-  const [meta, setMeta] = useState({ title: "", description: "", revealAnswers: true, attemptLimit: "" });
+  const [meta, setMeta] = useState({ title: "", description: "", revealAnswers: true, attemptLimit: "", price: "" });
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
@@ -60,6 +60,7 @@ function EditMaterial() {
       description: r.material.description,
       revealAnswers: r.material.revealAnswers,
       attemptLimit: r.material.attemptLimit ? String(r.material.attemptLimit) : "",
+      price: r.material.price ? String(r.material.price) : "",
     });
     setDirty(false);
   }, []);
@@ -105,7 +106,7 @@ function EditMaterial() {
     patch(
       "all",
       {
-        meta: { title: meta.title, description: meta.description, revealAnswers: meta.revealAnswers, attemptLimit: meta.attemptLimit ? Number(meta.attemptLimit) : null },
+        meta: { title: meta.title, description: meta.description, revealAnswers: meta.revealAnswers, attemptLimit: meta.attemptLimit ? Number(meta.attemptLimit) : null, price: meta.price ? Math.max(0, Math.round(Number(meta.price))) : null },
         key: cleanKey(key),
         ...(locked ? {} : { structure }),
       },
@@ -258,6 +259,43 @@ function EditMaterial() {
                   setDirty(true);
                 }}
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label" htmlFor="price">
+                Narx (so‘m)
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  id="price"
+                  type="number"
+                  min={0}
+                  max={100000000}
+                  step={1000}
+                  placeholder="bepul"
+                  className="field num max-w-48"
+                  value={meta.price}
+                  onChange={(e) => {
+                    setMeta({ ...meta, price: e.target.value });
+                    setDirty(true);
+                  }}
+                />
+                {[0, 15000, 30000, 50000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className="btn btn-sm"
+                    onClick={() => {
+                      setMeta({ ...meta, price: v ? String(v) : "" });
+                      setDirty(true);
+                    }}
+                  >
+                    {v ? `${v.toLocaleString("ru-RU")}` : "Bepul"}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                Narx qo‘yilsa, nomzod kartaga pul o‘tkazib “To‘ladim” deb so‘rov yuboradi; test siz “To‘lovlar” bo‘limida tasdiqlaganingizdan keyin ochiladi.
+              </p>
             </div>
           </div>
         </section>

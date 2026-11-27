@@ -59,6 +59,8 @@ export const MaterialMetaSchema = z.object({
   description: z.string().trim().max(1000).default(""),
   revealAnswers: z.boolean(),
   attemptLimit: z.number().int().min(1).max(50).nullable(),
+  /** so‘m; optional so older clients that don't send it never reset the price. */
+  price: z.number().int().min(0).max(100_000_000).nullable().optional(),
 });
 
 export const MaterialCreateSchema = MaterialMetaSchema.extend({

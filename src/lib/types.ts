@@ -30,6 +30,31 @@ export interface Profile {
   lastSeenAt?: number;
 }
 
+export type PaymentStatus = "pending" | "approved" | "rejected";
+
+export interface PaymentRecord {
+  uid: string;
+  materialId: string;
+  candidateId: string;
+  candidateName: string;
+  status: PaymentStatus;
+  /** Price (so‘m) at the time of the request. */
+  amount: number;
+  materialTitle: string;
+  /** What the candidate wrote (payer name, last card digits, time of transfer…). */
+  note: string;
+  requestedAt: number;
+  decidedAt?: number;
+  decidedBy?: "admin" | "agent";
+}
+
+/** Card details candidates transfer money to (public by nature — shown on paid tests). */
+export interface PaymentSettings {
+  cardNumber: string;
+  cardHolder: string;
+  instructions: string;
+}
+
 export interface MaterialStructure {
   y1Options: number;
   /** Per-task Y1 option counts overriding y1Options (copied from the format). */
@@ -73,6 +98,8 @@ export interface Material {
   keyStatus: { complete: boolean; problems: string[] };
   revealAnswers: boolean;
   attemptLimit: number | null;
+  /** Price in so‘m. null/0 = free. */
+  price?: number | null;
   attemptsCount: number;
   createdAt: number;
   updatedAt: number;
@@ -142,6 +169,7 @@ export interface PublicMaterial {
   format: ExamFormat;
   structure: MaterialStructure;
   attemptLimit: number | null;
+  price: number | null;
   publishedAt: number | null;
 }
 

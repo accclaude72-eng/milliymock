@@ -143,6 +143,7 @@ export function toPublicMaterial(m: Material): PublicMaterial {
     format: m.format,
     structure: m.structure,
     attemptLimit: m.attemptLimit,
+    price: m.price && m.price > 0 ? m.price : null,
     publishedAt: m.publishedAt,
   };
 }

@@ -39,6 +39,7 @@ export const GET = route(async () => {
         createdAt: m.createdAt,
         updatedAt: m.updatedAt,
         publishedAt: m.publishedAt,
+        price: m.price ?? null,
       };
     }),
   );

@@ -16,6 +16,8 @@ const NAV = [
   { href: "/admin/formatlar", label: "Fanlar va formatlar", code: "05" },
   { href: "/admin/jurnal", label: "Audit jurnali", code: "06" },
   { href: "/admin/dizayn", label: "Sayt dizayni", code: "07" },
+  { href: "/admin/tolovlar", label: "To‘lovlar", code: "08" },
+  { href: "/admin/agent", label: "AI agent", code: "09" },
 ];
 
 function isActive(pathname: string | null, href: string): boolean {

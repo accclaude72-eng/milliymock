@@ -14,6 +14,7 @@ export function MaterialCard({ m, index }: { m: PublicMaterial; index?: number }
         <span className={`chip ${m.mode === "full" ? "chip-accent" : "chip-info"}`}>{MODE_LABEL[m.mode]}</span>
         <span className="chip chip-ink">{m.subjectName}</span>
         {!m.timed && <span className="chip chip-ink">Vaqtsiz</span>}
+        <span className={`chip ml-auto ${m.price ? "chip-warn" : "chip-ok"}`}>{m.price ? `${m.price.toLocaleString("ru-RU")} so‘m` : "Bepul"}</span>
       </div>
       <h3 className="display mt-4 text-2xl leading-tight group-hover:italic">{m.title}</h3>
       {m.description && <p className="mt-2 line-clamp-2 text-sm text-ink-2">{m.description}</p>}

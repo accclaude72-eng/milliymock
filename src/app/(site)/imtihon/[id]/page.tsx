@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { RequireCandidate } from "@/components/guards";
+import { type PaymentInfo, PaymentPanel } from "@/components/payment-panel";
 import { Alert, PageLoader, Spinner } from "@/components/ui";
 import { api, errorText } from "@/lib/api";
 import { TASK_TYPE_LABEL } from "@/lib/formats";
@@ -16,6 +17,7 @@ interface Info {
   candidateName: string;
   inProgressAttemptId: string | null;
   finishedAttempts: number;
+  payment: PaymentInfo | null;
 }
 
 export default function Page() {
@@ -53,6 +55,7 @@ function Instructions() {
   const { material: m } = info;
   const f = m.format;
   const limitReached = m.attemptLimit != null && info.finishedAttempts >= m.attemptLimit && !info.inProgressAttemptId;
+  const mustPay = !!info.payment && info.payment.status !== "approved" && !info.inProgressAttemptId;
 
   const start = async () => {
     setStarting(true);
@@ -187,6 +190,8 @@ function Instructions() {
                 Imtihonni davom ettirish →
               </Link>
             </div>
+          ) : mustPay && info.ready && !limitReached ? (
+            <PaymentPanel materialId={m.id} info={info.payment!} candidateId={info.candidateId} onChange={(payment) => setInfo({ ...info, payment })} />
           ) : (
             info.ready &&
             !limitReached && (
