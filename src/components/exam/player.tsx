@@ -547,6 +547,7 @@ export function ExamPlayer({ attemptId }: { attemptId: string }) {
         onUpload={(f) => uploadFile(it.n, f)}
         onRemove={(fid) => removeFile(it.n, fid)}
         onOpen={(fid) => openFile(fid)}
+        variant={view.subjectCode === "multilevel" ? "essay" : "solution"}
       />
     );
   };

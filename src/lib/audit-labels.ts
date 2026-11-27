@@ -16,4 +16,5 @@ export const ACTION_LABEL: Record<string, string> = {
   "format.duplicate": "Format versiyasi nusxalandi",
   "subject.create": "Fan qo‘shildi",
   "subject.update": "Fan tahrirlandi",
+  "site.theme": "Sayt dizayni o‘zgartirildi",
 };

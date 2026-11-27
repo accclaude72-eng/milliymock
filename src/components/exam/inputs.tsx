@@ -209,14 +209,24 @@ export function O1Row(p: RowProps & { decimalHint?: boolean }) {
 
 /* ------------------------------------------------------------------ O2 */
 
+/** Multilevel Writing task labels (task numbers in the multilevel format). */
+const ESSAY_HINT: Record<number, { title: string; words: string; min: number }> = {
+  36: { title: "Task 1.1 · Informal letter", words: "~50", min: 45 },
+  37: { title: "Task 1.2 · Formal letter", words: "120–150", min: 120 },
+  38: { title: "Task 2 · Essay", words: "180–200", min: 180 },
+};
+
 export function O2Block(
   p: RowProps & {
     files: PublicFileMeta[];
     onUpload: (f: File) => Promise<void>;
     onRemove: (fileId: string) => Promise<void>;
     onOpen: (fileId: string) => Promise<void>;
+    /** "essay" = language writing (English): word counter, no formula keys. */
+    variant?: "solution" | "essay";
   },
 ) {
+  const essay = p.variant === "essay";
   const text = p.value && typeof p.value === "object" && !Array.isArray(p.value) ? p.value.text : "";
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -264,6 +274,8 @@ export function O2Block(
   };
 
   const answered = !!text.trim() || p.files.length > 0;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const essayHint = ESSAY_HINT[p.item.n];
 
   return (
     <section
@@ -276,13 +288,18 @@ export function O2Block(
     >
       <div className="flex items-baseline justify-between gap-2">
         <p className="font-semibold">
-          <span className="num mr-2">{p.item.n}</span>Yozma ish
+          <span className="num mr-2">{p.item.n}</span>
+          {essay ? (essayHint?.title ?? "Writing") : "Yozma ish"}
           {p.flagged && <span className="ml-2 font-mono text-accent">⚑</span>}
         </p>
         <span className="chip chip-ink">maks. {p.item.o2Max} ball</span>
       </div>
-      <p className="mt-1 text-xs text-muted">Yechim usuli (M) va hisob-kitoblar (A) alohida baholanadi — barcha bosqichlarni yozing.</p>
-      <div className="mt-2 flex flex-wrap gap-1" aria-label="Formulalar uchun belgilar">
+      <p className="mt-1 text-xs text-muted">
+        {essay
+          ? `Mazmun va tuzilish (M) hamda til aniqligi (A) alohida baholanadi.${essayHint ? ` Tavsiya: ${essayHint.words} so‘z.` : ""}`
+          : "Yechim usuli (M) va hisob-kitoblar (A) alohida baholanadi — barcha bosqichlarni yozing."}
+      </p>
+      {!essay && <div className="mt-2 flex flex-wrap gap-1" aria-label="Formulalar uchun belgilar">
         {["²", "³", "√", "π", "Δ", "·", "×", "÷", "→", "⇌", "≈", "≤", "≥", "°C", "₂", "₃", "⁺", "⁻"].map((s) => (
           <button
             key={s}
@@ -295,20 +312,25 @@ export function O2Block(
             {s}
           </button>
         ))}
-      </div>
+      </div>}
       <textarea
         ref={ref}
         aria-label={`${p.item.n}-topshiriq yechimi`}
-        className="field mt-2 min-h-48 resize-y font-[var(--font-sans)] leading-relaxed"
+        className={cx("field mt-2 resize-y font-[var(--font-sans)] leading-relaxed", essay ? "min-h-64" : "min-h-48")}
+        lang={essay ? "en" : undefined}
+        spellCheck={essay ? false : undefined}
         value={text}
         disabled={p.disabled}
         maxLength={20000}
-        placeholder="Berilgan: …&#10;Yechish: …&#10;Javob: …"
+        placeholder={essay ? "Start writing your answer here…" : "Berilgan: …\nYechish: …\nJavob: …"}
         onChange={(e) => p.onChange(e.target.value ? { text: e.target.value } : null)}
       />
       <div className="mt-1 flex justify-between font-mono text-[0.65rem] text-muted">
         <span>Matn avtomatik saqlanadi</span>
-        <span>{text.length} / 20 000</span>
+        <span>
+          {essay && <b className={cx("mr-3", essayHint && words >= essayHint.min ? "text-ok" : "text-ink-2")}>{words} so‘z</b>}
+          {text.length} / 20 000
+        </span>
       </div>
 
       <div className="mt-3 border-t border-hair pt-3">

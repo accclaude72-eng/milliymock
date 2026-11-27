@@ -8,6 +8,7 @@ import { Logo } from "./ui";
 import { cx } from "@/lib/format-utils";
 
 const NAV = [
+  { href: "/intro", label: "Tanishuv ✦" },
   { href: "/imtihonlar", label: "Imtihonlar" },
   { href: "/fanlar", label: "Fanlar" },
   { href: "/#jarayon", label: "Qanday ishlaydi" },

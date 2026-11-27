@@ -1,11 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
+import { Baloo_2, IBM_Plex_Mono, IBM_Plex_Sans, JetBrains_Mono, Manrope, Newsreader, Nunito, Playfair_Display, Sora } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
+import { getSiteTheme } from "@/lib/server/site-settings";
+import { THEME_IDS, THEME_PREVIEW_KEY, themeInfo } from "@/lib/themes";
 import "./globals.css";
+import "./themes.css";
 
 const serif = Newsreader({ variable: "--font-newsreader", subsets: ["latin", "latin-ext"], style: ["normal", "italic"], display: "swap" });
 const sans = IBM_Plex_Sans({ variable: "--font-plex-sans", subsets: ["latin", "latin-ext"], weight: ["400", "500", "600", "700"], display: "swap" });
 const mono = IBM_Plex_Mono({ variable: "--font-plex-mono", subsets: ["latin", "latin-ext"], weight: ["400", "500", "600"], display: "swap" });
+// Theme fonts: not preloaded — the browser only downloads the ones the active theme uses.
+const sora = Sora({ variable: "--font-sora", subsets: ["latin", "latin-ext"], display: "swap", preload: false });
+const jet = JetBrains_Mono({ variable: "--font-jet", subsets: ["latin", "latin-ext"], display: "swap", preload: false });
+const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin", "latin-ext"], style: ["normal", "italic"], display: "swap", preload: false });
+const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "latin-ext"], display: "swap", preload: false });
+const baloo = Baloo_2({ variable: "--font-baloo", subsets: ["latin", "latin-ext"], display: "swap", preload: false });
+const nunito = Nunito({ variable: "--font-nunito", subsets: ["latin", "latin-ext"], display: "swap", preload: false });
+const FONT_VARS = [serif, sans, mono, sora, jet, playfair, manrope, baloo, nunito].map((f) => f.variable).join(" ");
 
 export const metadata: Metadata = {
   title: { default: "Milliy Mock — Milliy sertifikat imtihoniga real formatda tayyorlaning", template: "%s · Milliy Mock" },
@@ -14,17 +25,21 @@ export const metadata: Metadata = {
   applicationName: "Milliy Mock",
 };
 
-export const viewport: Viewport = {
-  themeColor: "#f3f0e8",
-  colorScheme: "light",
-};
+export async function generateViewport(): Promise<Viewport> {
+  const t = themeInfo(await getSiteTheme());
+  return { themeColor: t.themeColor, colorScheme: t.dark ? "dark" : "light" };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// Runs before first paint: enables scroll-reveal styles, and applies an admin's
+// "preview on this device only" theme (stored locally, never affects other visitors).
+const BOOT = `(function(){var d=document.documentElement;d.classList.add('js');try{var p=localStorage.getItem(${JSON.stringify(THEME_PREVIEW_KEY)});if(p&&${JSON.stringify(THEME_IDS)}.indexOf(p)>=0){d.setAttribute('data-theme',p);d.setAttribute('data-theme-preview','')}}catch(e){}})();`;
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const theme = await getSiteTheme();
   return (
-    <html lang="uz" className={`${serif.variable} ${sans.variable} ${mono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="uz" data-theme={theme} className={`${FONT_VARS} h-full antialiased`} suppressHydrationWarning>
       <body className="flex min-h-full flex-col">
-        {/* Enables scroll-reveal styles only when JS runs (set before first paint, no flash). */}
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+        <script dangerouslySetInnerHTML={{ __html: BOOT }} />
         <a href="#asosiy" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 btn btn-ink">
           Asosiy mazmunga o‘tish
         </a>

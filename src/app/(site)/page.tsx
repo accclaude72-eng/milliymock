@@ -69,6 +69,9 @@ export default function Home() {
               <Link href="/fanlar" className="btn !min-h-12 !px-6 !text-base">
                 Fanlarni ko‘rish
               </Link>
+              <Link href="/intro" className="btn btn-ghost !min-h-12 !px-4 !text-base">
+                ✦ Tanishuv
+              </Link>
             </div>
             <dl className="mt-12 grid max-w-xl grid-cols-2 border-t-[1.5px] border-ink sm:grid-cols-4">
               {(
