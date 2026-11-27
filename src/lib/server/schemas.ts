@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 
-const letter = z.enum(["A", "B", "C", "D", "E", "F", "G", "H"]);
+const letter = z.enum(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]);
 const topic = z.string().trim().max(200).optional();
 
 export const KeyItemSchema = z.discriminatedUnion("type", [
@@ -48,8 +48,8 @@ export const KeyItemSchema = z.discriminatedUnion("type", [
 export const KeySchema = z.record(z.string().regex(/^\d{1,3}$/), KeyItemSchema);
 
 export const StructureSchema = z.object({
-  y1Options: z.number().int().min(2).max(8),
-  y1ByTask: z.record(z.string().regex(/^\d{1,3}$/), z.number().int().min(2).max(8)).optional(),
+  y1Options: z.number().int().min(2).max(10),
+  y1ByTask: z.record(z.string().regex(/^\d{1,3}$/), z.number().int().min(2).max(10)).optional(),
   y2: z.record(z.string().regex(/^\d{1,3}$/), z.object({ left: z.number().int().min(1).max(10), right: z.number().int().min(2).max(8) })),
 });
 

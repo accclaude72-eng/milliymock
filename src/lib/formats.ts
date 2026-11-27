@@ -289,14 +289,15 @@ DEFAULT_FORMATS.push(
     ],
     taskGroups: [
       { type: "O1", from: 1, to: 6 }, // Part 1 — gap filling (one word)
-      { type: "Y1", from: 7, to: 29 }, // Parts 2–4 — matching (A–H), headings (A–H), MCQ (A–D), True/False/Not Given
-      { type: "O1", from: 30, to: 32 }, // Part 5 — summary completion
-      { type: "Y1", from: 33, to: 35 }, // Part 5 — multiple choice
+      { type: "Y1", from: 7, to: 29 }, // Parts 2–4 — matching (A–J), headings (A–H), MCQ (A–D), True/False/Not Given
+      { type: "O1", from: 30, to: 33 }, // Part 5 — summary completion
+      { type: "Y1", from: 34, to: 35 }, // Part 5 — multiple choice
       { type: "O2", from: 36, to: 38 }, // Writing — Task 1.1, Task 1.2, Task 2
     ],
     y1OptionCount: 4,
     y1OptionsByTask: {
-      ...Object.fromEntries(range(7, 20).map((n) => [String(n), 8])), // matching / headings A–H
+      ...Object.fromEntries(range(7, 14).map((n) => [String(n), 10])), // Part 2 matching A–J
+      ...Object.fromEntries(range(15, 20).map((n) => [String(n), 8])), // Part 3 headings A–H
       ...Object.fromEntries(range(25, 29).map((n) => [String(n), 3])), // A True · B False · C Not Given
     },
     y2Scoring: "per_pair",
@@ -429,10 +430,10 @@ export function validateFormat(f: ExamFormat): string[] {
   const o2Numbers = f.taskGroups.filter((g) => g.type === "O2").flatMap((g) => range(g.from, g.to));
   for (const n of o2Numbers) if (!f.o2Tasks.some((t) => t.number === n && t.maxScore > 0)) errs.push(`${n}-yozma topshiriq uchun maksimal ball kiritilmagan.`);
   for (const t of f.o2Tasks) if (!o2Numbers.includes(t.number)) errs.push(`${t.number} raqami O2 guruhida emas.`);
-  if (f.y1OptionCount < 2 || f.y1OptionCount > 8) errs.push("Y1 variantlar soni 2–8 oralig‘ida bo‘lishi kerak.");
+  if (f.y1OptionCount < 2 || f.y1OptionCount > 10) errs.push("Y1 variantlar soni 2–10 oralig‘ida bo‘lishi kerak.");
   for (const [n, c] of Object.entries(f.y1OptionsByTask ?? {})) {
     if (taskTypeOf(f, Number(n)) !== "Y1") errs.push(`${n}-topshiriq Y1 emas — alohida variantlar soni berib bo‘lmaydi.`);
-    if (!(c >= 2 && c <= 8)) errs.push(`${n}-topshiriq variantlari soni 2–8 oralig‘ida bo‘lishi kerak.`);
+    if (!(c >= 2 && c <= 10)) errs.push(`${n}-topshiriq variantlari soni 2–10 oralig‘ida bo‘lishi kerak.`);
   }
   return errs;
 }
@@ -445,13 +446,15 @@ export function deriveFormat(base: ExamFormat, from: number, to: number, minutes
   const groups = base.taskGroups
     .map((g) => ({ ...g, from: Math.max(g.from, from), to: Math.min(g.to, to) }))
     .filter((g) => g.from <= g.to);
+  // A range that is exactly one official section (e.g. Multilevel "Reading" 1–35) keeps its real name.
+  const whole = base.sections.find((s) => s.from === from && s.to === to);
   const name = kind === "practice" ? "Mavzu bo‘yicha mashq" : "Qisqa diagnostika";
   return {
     ...base,
-    label: `${base.label} · ${name} (${from}–${to})`,
+    label: whole ? `${base.subjectName} · ${whole.title}` : `${base.label} · ${name} (${from}–${to})`,
     totalTasks: to - from + 1,
     totalMinutes: minutes ?? 0,
-    sections: [{ id: kind, title: `${name}: ${from}–${to}-topshiriqlar`, from, to, minutes: minutes ?? 0 }],
+    sections: [{ id: whole?.id ?? kind, title: whole ? `${whole.title}: ${from}–${to}` : `${name}: ${from}–${to}-topshiriqlar`, from, to, minutes: minutes ?? 0 }],
     taskGroups: groups,
     o2Tasks: base.o2Tasks.filter((t) => t.number >= from && t.number <= to),
   };
@@ -470,4 +473,4 @@ export function range(a: number, b: number): number[] {
   return out;
 }
 
-export const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+export const OPTION_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];

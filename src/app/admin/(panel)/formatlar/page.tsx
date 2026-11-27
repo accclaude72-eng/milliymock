@@ -236,7 +236,7 @@ function FormatEditor({ f, onClose, onSaved }: { f: Fmt; onClose: () => void; on
           </label>
           <label>
             <span className="label">Y1 variantlari</span>
-            <input type="number" min={2} max={8} className="field num" value={v.y1OptionCount} onChange={(e) => upd({ y1OptionCount: Number(e.target.value) || 4 })} />
+            <input type="number" min={2} max={10} className="field num" value={v.y1OptionCount} onChange={(e) => upd({ y1OptionCount: Number(e.target.value) || 4 })} />
           </label>
         </div>
 

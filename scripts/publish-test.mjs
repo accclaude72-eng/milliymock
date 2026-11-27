@@ -51,7 +51,7 @@ for (const [idx, nums] of Object.entries(spec.topics ?? {})) for (const n of num
 
 // 3) build the key in the app's format
 const key = {};
-for (const m of spec.y1.matchAll(/(\d+)\s*([A-H])/g)) key[m[1]] = { type: "Y1", correct: m[2], topic: topicOf[m[1]] };
+for (const m of spec.y1.matchAll(/(\d+)\s*([A-J])/g)) key[m[1]] = { type: "Y1", correct: m[2], topic: topicOf[m[1]] };
 for (const [n, pairs] of Object.entries(spec.y2 ?? {})) key[n] = { type: "Y2", left: pairs.length, right: 6, pairs, topic: topicOf[n] };
 const o1Type = format.taskGroups.find((g) => g.type === "O1" || g.type === "O")?.type ?? "O1";
 for (const [n, o] of Object.entries(spec.o1 ?? {})) key[n] = { type: o1Type, accepted: o.accepted, tolerance: o.tolerance ?? null, unit: o.unit, caseSensitive: !!o.caseSensitive, topic: topicOf[n] };
@@ -69,10 +69,11 @@ const { id } = await call("/api/admin/materials", "POST", {
   title: spec.title,
   description: spec.description ?? "",
   subjectCode: spec.subjectCode,
-  mode: "full",
-  timed: true,
-  range: null,
-  minutes: null,
+  // Optional: publish only part of a format, e.g. Multilevel Reading = { mode: "practice", range: { from: 1, to: 35 }, minutes: 60 }
+  mode: spec.mode ?? "full",
+  timed: spec.timed ?? true,
+  range: spec.range ?? null,
+  minutes: spec.minutes ?? null,
   revealAnswers: true,
   attemptLimit: null,
   html: { path: up.path, fileName: htmlPath.split(/[\\/]/).pop().replace(/[^a-zA-Z0-9_.-]/g, "_"), inlinedImages: 0, warnings: [] },

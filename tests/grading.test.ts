@@ -47,7 +47,12 @@ describe("official format seeds", () => {
     expect(validateFormat(f)).toEqual([]);
     const sheet = buildSheet(f, defaultStructure(f));
     expect(sheet).toHaveLength(38);
-    expect(sheet.find((s) => s.n === 10)?.options).toBe(8);
+    expect(sheet.find((s) => s.n === 10)?.options).toBe(10);
+    expect(sheet.find((s) => s.n === 17)?.options).toBe(8);
+    const reading = deriveFormat(f, 1, 35, 60, "practice");
+    expect(reading.label).toBe("Multilevel (English) · Reading");
+    expect(reading.sections[0].title).toBe("Reading: 1–35");
+    expect(buildSheet(reading, defaultStructure(reading))).toHaveLength(35);
     expect(sheet.find((s) => s.n === 22)?.options).toBe(4);
     expect(sheet.find((s) => s.n === 27)?.options).toBe(3);
     expect(sheet.filter((s) => s.type === "O2").map((s) => s.section)).toEqual([1, 1, 1]);

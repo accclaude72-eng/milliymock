@@ -50,7 +50,7 @@ export function Y1Row(p: RowProps) {
   const letters = OPTION_LETTERS.slice(0, p.item.options ?? 4);
   return (
     <RowShell {...p} answered={!!v}>
-      <div role="radiogroup" aria-label={`${p.item.n}-topshiriq javobi`} className="flex gap-2">
+      <div role="radiogroup" aria-label={`${p.item.n}-topshiriq javobi`} className="flex flex-wrap gap-2">
         {letters.map((l) => (
           <button
             key={l}

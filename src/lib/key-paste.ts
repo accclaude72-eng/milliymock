@@ -28,7 +28,7 @@ export function parseKeyPaste(text: string, sheet: QuestionSheetItem[], current:
   };
 
   const compact = text.replace(/\s+/g, "");
-  if (/^[A-Ha-h]{2,}$/.test(compact)) {
+  if (/^[A-Ja-j]{2,}$/.test(compact)) {
     compact.split("").forEach((l, i) => (y1[i] ? setY1(y1[i].n, l) : skipped.push(l)));
     return { key, applied, skipped };
   }
@@ -64,7 +64,7 @@ export function parseKeyPaste(text: string, sheet: QuestionSheetItem[], current:
       applied.push(s.n);
       continue;
     }
-    const pairs = Array.from(line.matchAll(/(\d{1,3})\s*[-–.):]?\s*([A-Ha-h])(?![A-Za-z])/g));
+    const pairs = Array.from(line.matchAll(/(\d{1,3})\s*[-–.):]?\s*([A-Ja-j])(?![A-Za-z])/g));
     if (pairs.length) pairs.forEach((p) => setY1(Number(p[1]), p[2]));
     else skipped.push(line);
   }

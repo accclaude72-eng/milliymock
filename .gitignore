@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Test content (answer keys!) - never commit to the public repo
 /content/
+
+# third-party source papers (PDF mocks) — keep out of the public repo
+/multilevel mocks/
