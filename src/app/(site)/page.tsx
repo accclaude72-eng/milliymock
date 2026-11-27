@@ -2,6 +2,9 @@ import Link from "next/link";
 import { SheetPreview } from "@/components/landing/sheet-preview";
 import { SubjectsGrid } from "@/components/landing/subjects-grid";
 import { TaskTypes } from "@/components/landing/task-types";
+import { FloatingGlyphs } from "@/components/art/floating-glyphs";
+import { SubjectArt } from "@/components/art/subject-art";
+import { CountUp, Reveal } from "@/components/reveal";
 import { SectionHead } from "@/components/ui";
 import { DEFAULT_GRADE_BOUNDARIES } from "@/lib/formats";
 
@@ -43,6 +46,7 @@ export default function Home() {
       {/* ------------------------------------------------------------ HERO */}
       <section className="relative overflow-hidden border-b-[1.5px] border-ink">
         <div className="graph-paper pointer-events-none absolute inset-0 opacity-60 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" aria-hidden />
+        <FloatingGlyphs />
         <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-[1.08fr_1fr] lg:gap-14 lg:pb-24 lg:pt-20">
           <div className="animate-rise">
             <p className="eyebrow flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -67,16 +71,26 @@ export default function Home() {
               </Link>
             </div>
             <dl className="mt-12 grid max-w-xl grid-cols-2 border-t-[1.5px] border-ink sm:grid-cols-4">
-              {[
-                ["43", "topshiriq", "Biologiya, kimyo"],
-                ["100+80", "daqiqa", "ikki bosqich"],
-                ["45", "topshiriq", "Matematika, fizika"],
-                ["150", "daqiqa", "bitta bosqich"],
-              ].map(([v, u, s]) => (
-                <div key={s + v} className="border-b border-hair py-4 pr-3 sm:border-b-0">
+              {(
+                [
+                  [[43], "topshiriq", "Biologiya, kimyo"],
+                  [[100, 80], "daqiqa", "ikki bosqich"],
+                  [[45], "topshiriq", "Matematika, fizika"],
+                  [[150], "daqiqa", "bitta bosqich"],
+                ] as [number[], string, string][]
+              ).map(([v, u, s]) => (
+                <div key={s} className="border-b border-hair py-4 pr-3 sm:border-b-0">
                   <dt className="sr-only">{s}</dt>
                   <dd>
-                    <span className="num text-2xl font-semibold">{v}</span> <span className="text-sm text-muted">{u}</span>
+                    <span className="num text-2xl font-semibold">
+                      {v.map((n, i) => (
+                        <span key={i}>
+                          {i > 0 && "+"}
+                          <CountUp to={n} />
+                        </span>
+                      ))}
+                    </span>{" "}
+                    <span className="text-sm text-muted">{u}</span>
                     <span className="mt-0.5 block font-mono text-[0.68rem] uppercase tracking-wider text-muted">{s}</span>
                   </dd>
                 </div>
@@ -84,29 +98,40 @@ export default function Home() {
             </dl>
           </div>
           <div className="animate-rise [animation-delay:120ms] lg:pt-6">
-            <SheetPreview />
+            <div className="float-y" style={{ animationDuration: "8s" }}>
+              <SheetPreview />
+            </div>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------ RIBBON */}
       <div className="border-b-[1.5px] border-ink bg-ink text-paper">
-        <div className="no-scrollbar mx-auto flex max-w-7xl gap-8 overflow-x-auto px-4 py-3 font-mono text-xs uppercase tracking-[0.16em] sm:px-6">
-          {["Y1 yopiq test", "Y2 moslashtirish", "O1 qisqa javob", "O2 yozma ish", "Server vaqti", "Avtosaqlash", "M / A rubrika", "Versiyalangan format"].map((t, i) => (
-            <span key={t} className="flex shrink-0 items-center gap-8">
-              {i > 0 && <span className="text-accent">◉</span>}
-              {t}
-            </span>
-          ))}
+        <div className="overflow-hidden py-3 font-mono text-xs uppercase tracking-[0.16em]">
+          {/* Two identical halves scroll seamlessly; second half hidden from screen readers. */}
+          <div className="marquee-track">
+            {[0, 1].map((copy) => (
+              <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 items-center gap-8 pr-8">
+                {["Y1 yopiq test", "Y2 moslashtirish", "O1 qisqa javob", "O2 yozma ish", "Server vaqti", "Avtosaqlash", "M / A rubrika", "Versiyalangan format", "Biologiya", "Kimyo", "Matematika", "Fizika"].map((t) => (
+                  <span key={t} className="flex shrink-0 items-center gap-8">
+                    <span className="text-accent">◉</span>
+                    {t}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ------------------------------------------------------------ SUBJECTS */}
       <section id="fanlar" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
-        <SectionHead index="01" eyebrow="Fanlar" title={<>Har bir fan — <em>o‘z</em> formati bilan</>}>
-          Biz barcha fanlarni bitta universal shablonga majburlamaymiz. Har bir fan alohida, versiyalangan konfiguratsiyaga ega: topshiriqlar soni,
-          turlari, bosqichlar va vaqt chegaralari rasmiy hujjatlardan olingan.
-        </SectionHead>
+        <Reveal>
+          <SectionHead index="01" eyebrow="Fanlar" title={<>Har bir fan — <em>o‘z</em> formati bilan</>}>
+            Biz barcha fanlarni bitta universal shablonga majburlamaymiz. Har bir fan alohida, versiyalangan konfiguratsiyaga ega: topshiriqlar soni,
+            turlari, bosqichlar va vaqt chegaralari rasmiy hujjatlardan olingan.
+          </SectionHead>
+        </Reveal>
         <div className="mt-10">
           <SubjectsGrid />
         </div>
@@ -115,28 +140,42 @@ export default function Home() {
       {/* ------------------------------------------------------------ TASK TYPES */}
       <section className="border-y-[1.5px] border-ink bg-paper-2/60">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-          <SectionHead index="02" eyebrow="Topshiriq turlari" title="To‘rt xil topshiriq, to‘rt xil mantiq">
-            Moslashtirish topshirig‘i oddiy test emas, qisqa javob esa satrlarni solishtirish emas. Har bir tur o‘z interfeysi va tekshirish qoidalariga
-            ega — quyida ularni sinab ko‘ring.
-          </SectionHead>
-          <div className="mt-10">
+          <Reveal>
+            <SectionHead index="02" eyebrow="Topshiriq turlari" title="To‘rt xil topshiriq, to‘rt xil mantiq">
+              Moslashtirish topshirig‘i oddiy test emas, qisqa javob esa satrlarni solishtirish emas. Har bir tur o‘z interfeysi va tekshirish qoidalariga
+              ega — quyida ularni sinab ko‘ring.
+            </SectionHead>
+          </Reveal>
+          <Reveal className="mt-10" delay={120}>
             <TaskTypes />
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ------------------------------------------------------------ PROCESS */}
       <section id="jarayon" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-20 sm:px-6">
-        <SectionHead index="03" eyebrow="Jarayon" title="Imtihon qanday o‘tadi">
-          Haqiqiy imtihondagi kabi: avval yo‘riqnoma, keyin vaqt. Taymer siz “Imtihonni boshlash” tugmasini bosgandan keyingina ishga tushadi.
-        </SectionHead>
+        <Reveal>
+          <SectionHead index="03" eyebrow="Jarayon" title="Imtihon qanday o‘tadi">
+            Haqiqiy imtihondagi kabi: avval yo‘riqnoma, keyin vaqt. Taymer siz “Imtihonni boshlash” tugmasini bosgandan keyingina ishga tushadi.
+          </SectionHead>
+        </Reveal>
         <ol className="mt-12 border-t-[1.5px] border-ink">
           {STEPS.map(([t, d], i) => (
-            <li key={t} className="group grid gap-2 border-b border-hair py-6 md:grid-cols-[6rem_minmax(0,22rem)_minmax(0,1fr)] md:gap-8">
-              <span className="num text-sm text-accent">{String(i + 1).padStart(2, "0")} / 05</span>
-              <h3 className="display text-3xl transition-all group-hover:italic">{t}</h3>
+            <Reveal
+              as="li"
+              key={t}
+              variant="left"
+              delay={i * 110}
+              className="group relative grid gap-2 border-b border-hair py-6 transition-colors hover:bg-card md:grid-cols-[6rem_minmax(0,22rem)_minmax(0,1fr)] md:gap-8"
+            >
+              <span className="flex items-center gap-3">
+                <span className="relative grid h-9 w-9 place-items-center rounded-full border-[1.5px] border-accent font-mono text-sm font-semibold text-accent transition-colors group-hover:bg-ink group-hover:text-paper group-hover:border-ink">
+                  {i + 1}
+                </span>
+              </span>
+              <h3 className="display text-3xl transition-all group-hover:translate-x-1 group-hover:italic">{t}</h3>
               <p className="max-w-2xl text-ink-2">{d}</p>
-            </li>
+            </Reveal>
           ))}
         </ol>
       </section>
@@ -171,7 +210,7 @@ export default function Home() {
               ))}
             </ol>
           </div>
-          <div className="relative">
+          <Reveal variant="scale" className="relative">
             <span className="absolute -top-3 left-5 z-10 -rotate-2 border-[1.5px] border-accent bg-ink px-2 py-0.5 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-accent">
               Demo ma’lumot
             </span>
@@ -203,14 +242,17 @@ export default function Home() {
                 ["Organ va organizm darajasi", 71],
                 ["Tur va populyatsiya darajasi", 54],
                 ["Ekotizim, biosfera va filogenez", 38],
-              ].map(([t, v]) => (
+              ].map(([t, v], i) => (
                 <div key={t as string} className="mb-2">
                   <div className="flex justify-between gap-3 text-xs">
                     <span className="truncate">{t}</span>
                     <span className="num">{v}%</span>
                   </div>
                   <div className="mt-1 h-2 overflow-hidden rounded-[1px] border border-ink bg-paper">
-                    <div className={`h-full ${(v as number) < 50 ? "bg-accent" : "bg-ink"}`} style={{ width: `${v}%` }} />
+                    <div
+                      className={`grow-bar h-full ${(v as number) < 50 ? "bg-accent" : "bg-ink"}`}
+                      style={{ width: `${v}%`, "--reveal-delay": `${300 + i * 150}ms` } as React.CSSProperties}
+                    />
                   </div>
                 </div>
               ))}
@@ -225,22 +267,30 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ------------------------------------------------------------ LEVELS */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
-        <SectionHead index="05" eyebrow="Ma’lumot uchun" title="Milliy sertifikat darajalari">
-          {DEFAULT_GRADE_BOUNDARIES.source} bo‘yicha. Platforma bu darajalarni mock natijangizga avtomatik tatbiq etmaydi — buning uchun rasmiy standart
-          shkala kerak.
-        </SectionHead>
-        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {DEFAULT_GRADE_BOUNDARIES.levels.map((l) => (
-            <div key={l.level} className="sheet p-4">
-              <p className="display text-5xl">{l.level}</p>
-              <p className="num mt-3 text-xs text-ink-2">{l.rule}</p>
-            </div>
+        <Reveal>
+          <SectionHead index="05" eyebrow="Ma’lumot uchun" title="Milliy sertifikat darajalari">
+            {DEFAULT_GRADE_BOUNDARIES.source} bo‘yicha. Platforma bu darajalarni mock natijangizga avtomatik tatbiq etmaydi — buning uchun rasmiy standart
+            shkala kerak.
+          </SectionHead>
+        </Reveal>
+        {/* Staircase: higher levels stand taller */}
+        <div className="mt-10 grid grid-cols-2 items-end gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {DEFAULT_GRADE_BOUNDARIES.levels.map((l, i, arr) => (
+            <Reveal key={l.level} delay={(arr.length - 1 - i) * 90}>
+              <div
+                className="sheet lift flex flex-col justify-between p-4"
+                style={{ minHeight: `${7 + (arr.length - i) * 1.4}rem`, background: i === 0 ? "var(--color-ink)" : undefined, color: i === 0 ? "var(--color-paper)" : undefined }}
+              >
+                <p className={`display text-5xl ${i === 0 ? "text-accent" : ""}`}>{l.level}</p>
+                <p className={`num mt-3 text-xs ${i === 0 ? "text-paper/70" : "text-ink-2"}`}>{l.rule}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
         <p className="mt-4 flex items-start gap-2 text-sm text-muted">
@@ -263,6 +313,15 @@ export default function Home() {
             </p>
             <h2 className="display mt-3 text-4xl sm:text-5xl">Ko‘p beriladigan savollar</h2>
             <p className="mt-4 text-ink-2">Javob topilmasa — platforma administratoriga murojaat qiling.</p>
+            <div className="mt-8 hidden grid-cols-2 gap-3 lg:grid" aria-hidden>
+              {["biologiya", "kimyo", "matematika", "fizika"].map((c, i) => (
+                <Reveal key={c} variant="scale" delay={i * 120}>
+                  <div className="sheet overflow-hidden">
+                    <SubjectArt code={c} className="block h-auto w-full" />
+                  </div>
+                </Reveal>
+              ))}
+            </div>
           </div>
           <div className="border-t-[1.5px] border-ink">
             {FAQ.map(([q, a]) => (

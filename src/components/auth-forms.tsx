@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { SubjectArt } from "./art/subject-art";
 import { useAuth } from "./auth-provider";
 import { NotConfigured } from "./guards";
 import { Alert, Logo, Spinner } from "./ui";
@@ -43,6 +44,18 @@ export function AuthShell({ title, subtitle, children, aside }: { title: string;
         <h1 className="display mt-4 text-6xl">{title}</h1>
         {subtitle && <div className="mt-5 max-w-md text-lg text-ink-2">{subtitle}</div>}
         {aside}
+        {/* Four subjects, gently tilted like cards on a desk */}
+        <div aria-hidden className="mt-10 grid max-w-md grid-cols-2 gap-3">
+          {["biologiya", "kimyo", "matematika", "fizika"].map((c, i) => (
+            <div
+              key={c}
+              className="float-y overflow-hidden rounded-[3px] border-[1.5px] border-ink bg-card shadow-hard-sm"
+              style={{ "--rot": `${[-2, 1.5, 1, -1.5][i]}deg`, animationDuration: `${6 + i}s`, animationDelay: `${i * -1.3}s` } as React.CSSProperties}
+            >
+              <SubjectArt code={c} className="block h-auto w-full" />
+            </div>
+          ))}
+        </div>
       </div>
       <div className="crop sheet-hard p-6 sm:p-8">
         <div className="mb-6 lg:hidden">

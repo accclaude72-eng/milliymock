@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { SubjectArt } from "@/components/art/subject-art";
 import { useAuth } from "@/components/auth-provider";
 import { TaskBar } from "@/components/landing/subjects-grid";
 import { MaterialCard } from "@/components/material-card";
@@ -80,11 +81,14 @@ function SubjectPage() {
       </nav>
       <div className="mt-4 grid gap-10 lg:grid-cols-[1.3fr_1fr]">
         <div>
+          <div aria-hidden className="mb-6 w-56 overflow-hidden rounded-[3px] border-[1.5px] border-ink bg-card shadow-hard animate-rise sm:w-72">
+            <SubjectArt code={subject.code} className="block h-auto w-full" />
+          </div>
           <h1 className="display text-6xl sm:text-7xl">{subject.name}</h1>
           <p className="mt-4 max-w-2xl text-lg text-ink-2">{subject.description}</p>
           {format && (
             <p className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-              <span className="chip chip-ink">Faol format: {format.label}</span>
+              <span className="chip chip-ink !whitespace-normal">Faol format: {format.label}</span>
               {format.sourceUrl && (
                 <a href={format.sourceUrl} target="_blank" rel="noopener noreferrer" className="link">
                   Rasmiy spetsifikatsiya ↗

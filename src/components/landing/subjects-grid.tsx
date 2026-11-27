@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { SubjectArt } from "../art/subject-art";
 import { DEFAULT_FORMATS, DEFAULT_SUBJECTS, type ExamFormat, type TaskType } from "@/lib/formats";
 import type { SubjectWithFormat } from "@/lib/types";
 
@@ -76,15 +77,18 @@ export function SubjectsGrid({ showCounts = true }: { showCounts?: boolean }) {
           style={{ animationDelay: `${i * 70}ms` }}
         >
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <p className="eyebrow">
                 {String(i + 1).padStart(2, "0")} · {s.format ? `Spetsifikatsiya ${s.format.version}` : "Format kiritilmagan"}
               </p>
-              <h3 className="display mt-2 text-4xl group-hover:italic">{s.name}</h3>
+              <h3 className="display mt-2 break-words text-3xl group-hover:italic sm:text-4xl">{s.name}</h3>
+              <span aria-hidden className="mt-3 inline-grid h-9 w-9 place-items-center rounded-full border-[1.5px] border-ink text-lg transition-all group-hover:translate-x-1 group-hover:bg-ink group-hover:text-paper">
+                →
+              </span>
             </div>
-            <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-[1.5px] border-ink text-lg transition-colors group-hover:bg-ink group-hover:text-paper">
-              →
-            </span>
+            <div aria-hidden className="w-24 shrink-0 overflow-hidden rounded-[2px] border border-hair bg-paper transition-transform duration-500 group-hover:-rotate-2 group-hover:scale-105 sm:w-40">
+              <SubjectArt code={s.code} className="block h-auto w-full" />
+            </div>
           </div>
           <p className="mt-3 text-sm text-ink-2">{s.description}</p>
           {s.format && (

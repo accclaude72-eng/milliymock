@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { cx } from "@/lib/format-utils";
+import { CountUp } from "./reveal";
 
 /** Wordmark: the "O" in MOCK is a filled answer bubble. */
 export function Logo({ className, compact = false }: { className?: string; compact?: boolean }) {
@@ -151,9 +152,11 @@ export function SectionHead({ index, eyebrow, title, children, className }: { in
 
 export function Stat({ label, value, hint, tone }: { label: string; value: React.ReactNode; hint?: React.ReactNode; tone?: "accent" | "ok" }) {
   return (
-    <div className="sheet p-4">
+    <div className="sheet lift p-4 animate-rise">
       <p className="eyebrow">{label}</p>
-      <p className={cx("num mt-2 text-3xl font-semibold", tone === "accent" && "text-accent", tone === "ok" && "text-ok")}>{value}</p>
+      <p className={cx("num mt-2 text-3xl font-semibold", tone === "accent" && "text-accent", tone === "ok" && "text-ok")}>
+        {typeof value === "number" ? <CountUp to={value} duration={900} /> : value}
+      </p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </div>
   );

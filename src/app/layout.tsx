@@ -21,8 +21,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="uz" className={`${serif.variable} ${sans.variable} ${mono.variable} h-full antialiased`}>
+    <html lang="uz" className={`${serif.variable} ${sans.variable} ${mono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="flex min-h-full flex-col">
+        {/* Enables scroll-reveal styles only when JS runs (set before first paint, no flash). */}
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
         <a href="#asosiy" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 btn btn-ink">
           Asosiy mazmunga o‘tish
         </a>
