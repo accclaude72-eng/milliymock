@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/server/admin-session";
-import { db } from "@/lib/server/firebase-admin";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
-import { COL, audit } from "@/lib/server/repo";
+import { audit } from "@/lib/server/repo";
+import { T, getDoc, upsertDoc } from "@/lib/server/supabase";
 import type { ExamFormat, SubjectInfo } from "@/lib/formats";
 
 const Edit = z.object({
@@ -18,13 +18,10 @@ export const PATCH = route<{ params: Promise<{ code: string }> }>(async (req, { 
   await requireAdmin();
   const { code } = await params;
   const body = Edit.parse(await readJson(req));
-  const f = db();
-  const ref = f.collection(COL.subjects).doc(code);
-  const [snap, fmt] = await Promise.all([ref.get(), f.collection(COL.formats).doc(body.activeFormatId).get()]);
-  if (!snap.exists) throw new ApiError(404, "not_found", "Fan topilmadi.");
-  if (!fmt.exists || (fmt.data() as ExamFormat).subjectCode !== code) throw new ApiError(400, "bad_format", "Tanlangan format ushbu fanga tegishli emas.");
-  const before = snap.data() as SubjectInfo;
-  await ref.update(body);
+  const [before, fmt] = await Promise.all([getDoc<SubjectInfo>(T.subjects, code), getDoc<ExamFormat>(T.formats, body.activeFormatId)]);
+  if (!before) throw new ApiError(404, "not_found", "Fan topilmadi.");
+  if (!fmt || fmt.subjectCode !== code) throw new ApiError(400, "bad_format", "Tanlangan format ushbu fanga tegishli emas.");
+  await upsertDoc(T.subjects, code, { ...before, ...body });
   await audit("subject.update", `subjects/${code}`, { before, after: body });
   return ok({ ...before, ...body });
 });

@@ -1,60 +1,53 @@
 import "server-only";
-import { FieldValue } from "firebase-admin/firestore";
 import { DEFAULT_FORMATS, DEFAULT_SUBJECTS, type ExamFormat, type SubjectInfo } from "../formats";
-import type { Material, Profile, PublicMaterial, SubjectWithFormat } from "../types";
-import { db } from "./firebase-admin";
+import type { Attempt, Material, MaterialKeyDoc, Profile, PublicMaterial, SubjectWithFormat } from "../types";
 import { ApiError } from "./http";
+import { T, getDoc, must, sb } from "./supabase";
 
-export const COL = {
-  subjects: "subjects",
-  formats: "formats",
-  profiles: "profiles",
-  materials: "materials",
-  materialKeys: "materialKeys",
-  attempts: "attempts",
-  audit: "auditLogs",
-  meta: "meta",
-  rate: "rateLimits",
-} as const;
+export { T } from "./supabase";
 
 /* ------------------------------------------------------------------ seeding */
 
 let seeded = false;
 
-/** Seeds default subjects + format versions exactly once (transactional guard). */
+/** Inserts the default subjects + format versions once. Never overwrites admin edits. */
 export async function ensureSeeded(): Promise<void> {
   if (seeded) return;
-  const f = db();
-  const markerRef = f.collection(COL.meta).doc("seed");
-  await f.runTransaction(async (tx) => {
-    const marker = await tx.get(markerRef);
-    if (marker.exists) return;
-    const now = Date.now();
-    for (const fmt of DEFAULT_FORMATS) tx.set(f.collection(COL.formats).doc(fmt.id), { ...fmt, createdAt: now, updatedAt: now });
-    for (const s of DEFAULT_SUBJECTS) tx.set(f.collection(COL.subjects).doc(s.code), s);
-    tx.set(markerRef, { at: now, version: 1 });
-  });
+  const now = Date.now();
+  must(
+    await sb()
+      .from(T.formats)
+      .upsert(DEFAULT_FORMATS.map((f) => ({ id: f.id, doc: { ...f, createdAt: now, updatedAt: now } })), { onConflict: "id", ignoreDuplicates: true }),
+    "seed formats",
+  );
+  must(
+    await sb()
+      .from(T.subjects)
+      .upsert(DEFAULT_SUBJECTS.map((s) => ({ id: s.code, doc: s })), { onConflict: "id", ignoreDuplicates: true }),
+    "seed subjects",
+  );
   seeded = true;
 }
 
 /* ---------------------------------------------------------------- subjects */
 
+export async function allFormats(): Promise<ExamFormat[]> {
+  await ensureSeeded();
+  return (must(await sb().from(T.formats).select("doc"), "list formats") ?? []).map((r) => r.doc as ExamFormat);
+}
+
 export async function listSubjects(includeArchived = false): Promise<SubjectWithFormat[]> {
   await ensureSeeded();
-  const f = db();
   const [subs, fmts, mats] = await Promise.all([
-    f.collection(COL.subjects).get(),
-    f.collection(COL.formats).get(),
-    f.collection(COL.materials).where("status", "==", "published").select("subjectCode").get(),
+    sb().from(T.subjects).select("doc"),
+    sb().from(T.formats).select("doc"),
+    sb().from(T.materials).select("subject_code").eq("status", "published"),
   ]);
-  const formats = new Map(fmts.docs.map((d) => [d.id, d.data() as ExamFormat]));
+  const formats = new Map((must(fmts, "formats") ?? []).map((r) => [(r.doc as ExamFormat).id, r.doc as ExamFormat]));
   const counts = new Map<string, number>();
-  for (const m of mats.docs) {
-    const c = m.get("subjectCode") as string;
-    counts.set(c, (counts.get(c) ?? 0) + 1);
-  }
-  return subs.docs
-    .map((d) => d.data() as SubjectInfo)
+  for (const m of must(mats, "materials") ?? []) counts.set(m.subject_code, (counts.get(m.subject_code) ?? 0) + 1);
+  return (must(subs, "subjects") ?? [])
+    .map((r) => r.doc as SubjectInfo)
     .filter((s) => includeArchived || !s.archived)
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
     .map((s) => ({ ...s, format: formats.get(s.activeFormatId) ?? null, publishedMaterials: counts.get(s.code) ?? 0 }));
@@ -62,64 +55,80 @@ export async function listSubjects(includeArchived = false): Promise<SubjectWith
 
 export async function getSubject(code: string): Promise<SubjectInfo> {
   await ensureSeeded();
-  const snap = await db().collection(COL.subjects).doc(code).get();
-  if (!snap.exists) throw new ApiError(404, "subject_not_found", "Fan topilmadi.");
-  return snap.data() as SubjectInfo;
+  const s = await getDoc<SubjectInfo>(T.subjects, code);
+  if (!s) throw new ApiError(404, "subject_not_found", "Fan topilmadi.");
+  return s;
 }
 
 export async function getFormat(id: string): Promise<ExamFormat> {
   await ensureSeeded();
-  const snap = await db().collection(COL.formats).doc(id).get();
-  if (!snap.exists) throw new ApiError(404, "format_not_found", "Imtihon formati topilmadi.");
-  return snap.data() as ExamFormat;
+  const f = await getDoc<ExamFormat>(T.formats, id);
+  if (!f) throw new ApiError(404, "format_not_found", "Imtihon formati topilmadi.");
+  return f;
 }
 
 /* ---------------------------------------------------------------- profiles */
 
 export async function getProfile(uid: string): Promise<Profile | null> {
-  const snap = await db().collection(COL.profiles).doc(uid).get();
-  return snap.exists ? (snap.data() as Profile) : null;
+  return getDoc<Profile>(T.profiles, uid);
 }
 
-/** Allocates a unique, sequential Candidate ID like MM-26-000123 inside a transaction. */
+/** Creates the profile with a unique sequential Candidate ID like MM-26-000123 (idempotent). */
 export async function createProfile(
   uid: string,
   email: string,
   data: Pick<Profile, "firstName" | "lastName" | "phone" | "region" | "institution" | "grade">,
   emailVerified: boolean,
 ): Promise<Profile> {
-  const f = db();
-  const profileRef = f.collection(COL.profiles).doc(uid);
-  const counterRef = f.collection(COL.meta).doc("candidateCounter");
-  return f.runTransaction(async (tx) => {
-    const [existing, counter] = await Promise.all([tx.get(profileRef), tx.get(counterRef)]);
-    if (existing.exists) return existing.data() as Profile;
-    const next = ((counter.exists ? (counter.get("value") as number) : 0) || 0) + 1;
-    const yy = new Date().getFullYear().toString().slice(-2);
-    const now = Date.now();
-    const profile: Profile = {
-      uid,
-      email,
-      candidateId: `MM-${yy}-${String(next).padStart(6, "0")}`,
-      ...data,
-      status: "active",
-      emailVerified,
-      createdAt: now,
-      updatedAt: now,
-      lastSeenAt: now,
-    };
-    tx.set(counterRef, { value: next }, { merge: true });
-    tx.set(profileRef, profile);
-    return profile;
-  });
+  const existing = await getProfile(uid);
+  if (existing) return existing;
+  const next = must(await sb().rpc("next_candidate_number"), "candidate number") as number;
+  const yy = new Date().getFullYear().toString().slice(-2);
+  const now = Date.now();
+  const profile: Profile = {
+    uid,
+    email,
+    candidateId: `MM-${yy}-${String(next).padStart(6, "0")}`,
+    ...data,
+    status: "active",
+    emailVerified,
+    createdAt: now,
+    updatedAt: now,
+    lastSeenAt: now,
+  };
+  const { error } = await sb().from(T.profiles).insert({ id: uid, doc: profile });
+  if (error?.code === "23505") return (await getProfile(uid))!; // created concurrently
+  must({ data: null, error }, "insert profile");
+  return profile;
+}
+
+export async function saveProfile(p: Profile): Promise<void> {
+  must(await sb().from(T.profiles).update({ doc: p, updated_at: new Date().toISOString() }).eq("id", p.uid), "update profile");
 }
 
 /* --------------------------------------------------------------- materials */
 
 export async function getMaterial(id: string): Promise<Material> {
-  const snap = await db().collection(COL.materials).doc(id).get();
-  if (!snap.exists) throw new ApiError(404, "material_not_found", "Test materiali topilmadi.");
-  return snap.data() as Material;
+  const m = await getDoc<Material>(T.materials, id);
+  if (!m) throw new ApiError(404, "material_not_found", "Test materiali topilmadi.");
+  return m;
+}
+
+export async function getKey(materialId: string): Promise<MaterialKeyDoc | null> {
+  return getDoc<MaterialKeyDoc>(T.keys, materialId);
+}
+
+export async function countAttempts(materialId: string): Promise<number> {
+  const r = await sb().from(T.attempts).select("id", { count: "exact", head: true }).eq("material_id", materialId);
+  must(r, "count attempts");
+  return r.count ?? 0;
+}
+
+export async function attemptsOf(filter: { uid?: string; materialId?: string }): Promise<Attempt[]> {
+  let q = sb().from(T.attempts).select("doc");
+  if (filter.uid) q = q.eq("user_id", filter.uid);
+  if (filter.materialId) q = q.eq("material_id", filter.materialId);
+  return (must(await q.order("created_ms", { ascending: false }), "list attempts") ?? []).map((r) => r.doc as Attempt);
 }
 
 export function toPublicMaterial(m: Material): PublicMaterial {
@@ -141,41 +150,17 @@ export function toPublicMaterial(m: Material): PublicMaterial {
 /* ------------------------------------------------------------------- audit */
 
 export async function audit(action: string, target: string, details: Record<string, unknown> = {}, actor = "admin"): Promise<void> {
-  try {
-    await db().collection(COL.audit).add({ at: Date.now(), actor, action, target, details });
-  } catch (e) {
-    console.error("[audit] failed to write", action, target, e);
-  }
+  const { error } = await sb().from(T.audit).insert({ actor, action, target, details });
+  if (error) console.error("[audit] failed to write", action, target, error);
 }
 
 /* -------------------------------------------------------------- rate limit */
 
-/**
- * Fixed-window rate limiter backed by Firestore so it holds across serverless instances.
- * Returns true when the action is allowed.
- */
+/** Atomic fixed-window rate limiter in Postgres (holds across serverless instances). */
 export async function rateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
-  const f = db();
-  const ref = f.collection(COL.rate).doc(key.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 300));
-  return f.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const now = Date.now();
-    const start = snap.exists ? (snap.get("windowStart") as number) : 0;
-    const count = snap.exists ? (snap.get("count") as number) : 0;
-    if (!snap.exists || now - start >= windowMs) {
-      tx.set(ref, { windowStart: now, count: 1, expiresAt: now + windowMs });
-      return true;
-    }
-    if (count >= limit) return false;
-    tx.update(ref, { count: FieldValue.increment(1) });
-    return true;
-  });
+  return must(await sb().rpc("rate_limit_hit", { p_key: key.slice(0, 300), p_limit: limit, p_window_ms: windowMs }), "rate limit") as boolean;
 }
 
 export async function resetRateLimit(key: string): Promise<void> {
-  await db()
-    .collection(COL.rate)
-    .doc(key.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 300))
-    .delete()
-    .catch(() => undefined);
+  await sb().rpc("rate_limit_reset", { p_key: key.slice(0, 300) });
 }

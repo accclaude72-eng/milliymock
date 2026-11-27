@@ -1,11 +1,10 @@
 "use client";
 
-import { ref as storageRef, uploadBytesResumable } from "firebase/storage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiClientError, api, errorText } from "@/lib/api";
-import { candidateAuth, candidateStorage } from "@/lib/firebase/client";
+import { ApiClientError, accessToken, api, errorText } from "@/lib/api";
+import { supabase } from "@/lib/supabase/client";
 import { cx, fmtClock, fmtDateTime } from "@/lib/format-utils";
 import type { AnswerValue, Answers } from "@/lib/grading";
 import type { PlayerViewT, QuestionSheetItem } from "@/lib/types";
@@ -144,7 +143,7 @@ export function ExamPlayer({ attemptId }: { attemptId: string }) {
 
   const refreshToken = useCallback(async () => {
     try {
-      tokenRef.current = (await candidateAuth().currentUser?.getIdToken()) ?? null;
+      tokenRef.current = await accessToken();
     } catch {
       /* ignore */
     }
@@ -426,16 +425,17 @@ export function ExamPlayer({ attemptId }: { attemptId: string }) {
   };
 
   const uploadFile = useCallback(async (n: number, f: File) => {
-    const user = candidateAuth().currentUser;
-    if (!user) throw new Error("Sessiya tugagan. Qayta kiring.");
-    const safe = f.name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(-80) || "fayl";
-    const path = `submissions/${user.uid}/${attemptId}/${n}/${newId()}-${safe}`;
-    await new Promise<void>((resolve, reject) => {
-      const task = uploadBytesResumable(storageRef(candidateStorage(), path), f, { contentType: f.type });
-      task.on("state_changed", undefined, (err) => reject(new Error(err.code === "storage/unauthorized" ? "Faylni yuklashga ruxsat berilmadi (turi yoki hajmi noto‘g‘ri)." : "Faylni yuklab bo‘lmadi. Internet aloqasini tekshiring.")), () => resolve());
+    // 1) server checks the attempt and issues a one-time signed upload URL (private bucket)
+    const up = await api<{ path: string; token: string }>(`/api/attempts/${attemptId}/files`, {
+      method: "POST",
+      body: { action: "prepare", n: String(n), name: f.name, size: f.size, contentType: f.type },
     });
+    // 2) browser uploads the file directly to Supabase Storage
+    const { error } = await supabase().storage.from("submissions").uploadToSignedUrl(up.path, up.token, f, { contentType: f.type });
+    if (error) throw new Error("Faylni yuklab bo‘lmadi (turi, hajmi yoki internet aloqasini tekshiring).");
+    // 3) server verifies the stored object and attaches it to the attempt
     const sentAt = Date.now();
-    const res = await api<{ view: PlayerViewT }>(`/api/attempts/${attemptId}/files`, { method: "POST", body: { n: String(n), path, name: f.name } });
+    const res = await api<{ view: PlayerViewT }>(`/api/attempts/${attemptId}/files`, { method: "POST", body: { action: "register", n: String(n), path: up.path, name: f.name } });
     applyView(res.view, sentAt);
   }, [attemptId, applyView]);
   const removeFile = useCallback(async (n: number, fileId: string) => {

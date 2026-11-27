@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/server/admin-session";
-import { db } from "@/lib/server/firebase-admin";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
-import { COL, audit, ensureSeeded } from "@/lib/server/repo";
+import { audit, ensureSeeded } from "@/lib/server/repo";
+import { T, getDoc, insertDoc } from "@/lib/server/supabase";
 import type { ExamFormat, SubjectInfo } from "@/lib/formats";
 
 const Create = z.object({
@@ -20,20 +20,19 @@ export const POST = route(async (req) => {
   await requireAdmin();
   await ensureSeeded();
   const body = Create.parse(await readJson(req));
-  const f = db();
   const formatId = `${body.code}-${body.version.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-  await f.runTransaction(async (tx) => {
+  {
     const [sub, tpl, dst] = await Promise.all([
-      tx.get(f.collection(COL.subjects).doc(body.code)),
-      tx.get(f.collection(COL.formats).doc(body.templateFormatId)),
-      tx.get(f.collection(COL.formats).doc(formatId)),
+      getDoc<SubjectInfo>(T.subjects, body.code),
+      getDoc<ExamFormat>(T.formats, body.templateFormatId),
+      getDoc<ExamFormat>(T.formats, formatId),
     ]);
-    if (sub.exists) throw new ApiError(409, "exists", "Bunday kodli fan mavjud.");
-    if (!tpl.exists) throw new ApiError(404, "not_found", "Shablon format topilmadi.");
-    if (dst.exists) throw new ApiError(409, "exists", `Format ${formatId} allaqachon mavjud.`);
+    if (sub) throw new ApiError(409, "exists", "Bunday kodli fan mavjud.");
+    if (!tpl) throw new ApiError(404, "not_found", "Shablon format topilmadi.");
+    if (dst) throw new ApiError(409, "exists", `Format ${formatId} allaqachon mavjud.`);
     const now = Date.now();
     const fmt: ExamFormat = {
-      ...(tpl.data() as ExamFormat),
+      ...tpl,
       id: formatId,
       subjectCode: body.code,
       subjectName: body.name,
@@ -48,9 +47,9 @@ export const POST = route(async (req) => {
       updatedAt: now,
     };
     const subject: SubjectInfo = { code: body.code, name: body.name, description: body.description, order: body.order, activeFormatId: formatId, archived: false };
-    tx.set(f.collection(COL.formats).doc(formatId), fmt);
-    tx.set(f.collection(COL.subjects).doc(body.code), subject);
-  });
+    if (!(await insertDoc(T.formats, formatId, fmt))) throw new ApiError(409, "exists", `Format ${formatId} allaqachon mavjud.`);
+    if (!(await insertDoc(T.subjects, body.code, subject))) throw new ApiError(409, "exists", "Bunday kodli fan mavjud.");
+  }
   await audit("subject.create", `subjects/${body.code}`, { formatId });
   return ok({ code: body.code, formatId }, 201);
 });

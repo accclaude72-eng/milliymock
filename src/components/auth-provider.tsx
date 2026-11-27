@@ -1,15 +1,36 @@
 "use client";
 
-import { type User, onIdTokenChanged, signOut as fbSignOut } from "firebase/auth";
+import type { User as SbUser } from "@supabase/supabase-js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ApiClientError, api } from "@/lib/api";
-import { candidateAuth, clientConfigured } from "@/lib/firebase/client";
+import { clientConfigured, supabase } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
+
+/** The signed-in user as the UI needs it (kept small and provider-neutral). */
+export interface AppUser {
+  uid: string;
+  email: string;
+  emailVerified: boolean;
+  displayName: string | null;
+  /** Profile fields entered at registration (kept in auth metadata until the profile exists). */
+  pendingProfile: Record<string, string> | null;
+}
+
+function toAppUser(u: SbUser): AppUser {
+  const meta = (u.user_metadata ?? {}) as { full_name?: string; name?: string; profile?: Record<string, string> };
+  return {
+    uid: u.id,
+    email: u.email ?? "",
+    emailVerified: !!u.email_confirmed_at,
+    displayName: meta.full_name ?? meta.name ?? null,
+    pendingProfile: meta.profile && typeof meta.profile === "object" ? meta.profile : null,
+  };
+}
 
 interface AuthState {
   configured: boolean;
   loading: boolean;
-  user: User | null;
+  user: AppUser | null;
   profile: Profile | null;
   /** Error loading the profile (e.g. server not configured). */
   profileError: string | null;
@@ -20,7 +41,7 @@ interface AuthState {
 const Ctx = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(clientConfigured);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -43,27 +64,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!clientConfigured) return;
-    const unsub = onIdTokenChanged(candidateAuth(), async (u) => {
-      if (u && loadedUid.current !== u.uid) setLoading(true); // batched with setUser below
+    const { data } = supabase().auth.onAuthStateChange((_event, session) => {
+      const u = session?.user ? toAppUser(session.user) : null;
+      if (u && loadedUid.current !== u.uid) setLoading(true);
       setUser(u);
-      if (u) {
-        // Only refetch the profile on sign-in / account switch, not on hourly token refresh.
-        if (loadedUid.current !== u.uid) {
-          loadedUid.current = u.uid;
-          await loadProfile();
+      // Defer: Supabase must not be called synchronously inside this callback.
+      setTimeout(async () => {
+        if (u) {
+          // Only refetch the profile on sign-in / account switch, not on token refresh.
+          if (loadedUid.current !== u.uid) {
+            loadedUid.current = u.uid;
+            const p = await loadProfile();
+            // First login after e-mail confirmation: create the profile from the registration data.
+            if (!p && u.pendingProfile?.firstName && u.pendingProfile?.lastName) {
+              try {
+                const r = await api<{ profile: Profile }>("/api/me", { method: "POST", body: u.pendingProfile });
+                setProfile(r.profile);
+              } catch {
+                /* fall back to the profile form */
+              }
+            }
+          }
+        } else {
+          loadedUid.current = null;
+          setProfile(null);
         }
-      } else {
-        loadedUid.current = null;
-        setProfile(null);
-      }
-      setLoading(false);
+        setLoading(false);
+      }, 0);
     });
-    return unsub;
+    return () => data.subscription.unsubscribe();
   }, [loadProfile]);
 
   const signOut = useCallback(async () => {
     if (!clientConfigured) return;
-    await fbSignOut(candidateAuth());
+    await supabase().auth.signOut();
     setProfile(null);
   }, []);
 

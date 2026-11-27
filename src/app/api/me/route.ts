@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { db } from "@/lib/server/firebase-admin";
 import { ApiError, ok, readJson, route } from "@/lib/server/http";
-import { COL, createProfile, getProfile, rateLimit } from "@/lib/server/repo";
+import { createProfile, getProfile, rateLimit, saveProfile } from "@/lib/server/repo";
 import { requireUser } from "@/lib/server/user-auth";
 
 const name = z.string().trim().min(2, "kamida 2 ta belgi").max(60);
@@ -27,11 +26,11 @@ export const GET = route(async (req) => {
   const user = await requireUser(req);
   const profile = await getProfile(user.uid);
   if (profile) {
-    const patch: Record<string, unknown> = { lastSeenAt: Date.now() };
-    if (profile.emailVerified !== user.emailVerified) patch.emailVerified = user.emailVerified;
-    await db().collection(COL.profiles).doc(user.uid).update(patch);
+    const next = { ...profile, lastSeenAt: Date.now(), emailVerified: user.emailVerified };
+    await saveProfile(next);
+    return ok({ profile: next, email: user.email, emailVerified: user.emailVerified });
   }
-  return ok({ profile: profile ? { ...profile, emailVerified: user.emailVerified } : null, email: user.email, emailVerified: user.emailVerified });
+  return ok({ profile: null, email: user.email, emailVerified: user.emailVerified });
 });
 
 /** Provisions the profile + Candidate ID (idempotent). */
@@ -49,9 +48,7 @@ export const PATCH = route(async (req) => {
   const input = ProfileInput.parse(await readJson(req));
   const existing = await getProfile(user.uid);
   if (!existing) throw new ApiError(404, "profile_required", "Profil topilmadi.");
-  await db()
-    .collection(COL.profiles)
-    .doc(user.uid)
-    .update({ ...input, updatedAt: Date.now() });
-  return ok({ profile: { ...existing, ...input } });
+  const next = { ...existing, ...input, updatedAt: Date.now() };
+  await saveProfile(next);
+  return ok({ profile: next });
 });

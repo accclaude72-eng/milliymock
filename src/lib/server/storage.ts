@@ -1,46 +1,34 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
-import { bucket, usingEmulators } from "./firebase-admin";
+import { ApiError } from "./http";
+import { sb } from "./supabase";
 
-/**
- * Returns a short-lived URL to read a private Storage object.
- * Production: V4 signed URL (expires). If signing is unavailable (e.g. emulator),
- * falls back to a Firebase download-token URL that is only ever handed out by
- * authorised server routes.
- */
-export async function readUrl(path: string, minutes = 60): Promise<string> {
-  const file = bucket().file(path);
-  if (!usingEmulators()) {
-    try {
-      const [url] = await file.getSignedUrl({ version: "v4", action: "read", expires: Date.now() + minutes * 60_000 });
-      return url;
-    } catch (e) {
-      console.warn("[storage] signed URL failed, falling back to download token:", (e as Error).message);
-    }
+/** Short-lived URL to read a private object. Only handed out by authorised routes. */
+export async function readUrl(bucket: string, path: string, minutes = 60): Promise<string> {
+  const { data, error } = await sb().storage.from(bucket).createSignedUrl(path, minutes * 60);
+  if (error || !data) {
+    console.error("[storage] sign url", bucket, path, error);
+    throw new ApiError(404, "file_missing", "Fayl topilmadi.");
   }
-  const [meta] = await file.getMetadata();
-  let token = (meta.metadata?.firebaseStorageDownloadTokens as string | undefined)?.split(",")[0];
-  if (!token) {
-    token = randomUUID();
-    await file.setMetadata({ metadata: { firebaseStorageDownloadTokens: token } });
-  }
-  const b = bucket().name;
-  const host = usingEmulators() ? `http://${process.env.FIREBASE_STORAGE_EMULATOR_HOST}` : "https://firebasestorage.googleapis.com";
-  return `${host}/v0/b/${b}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+  return data.signedUrl;
 }
 
-export async function objectMeta(path: string): Promise<{ size: number; contentType: string } | null> {
-  try {
-    const [meta] = await bucket().file(path).getMetadata();
-    return { size: Number(meta.size ?? 0), contentType: String(meta.contentType ?? "") };
-  } catch {
-    return null;
+/** One-time signed upload URL so the browser can upload a file straight to a private bucket. */
+export async function uploadUrl(bucket: string, path: string): Promise<{ path: string; token: string }> {
+  const { data, error } = await sb().storage.from(bucket).createSignedUploadUrl(path);
+  if (error || !data) {
+    console.error("[storage] upload url", bucket, path, error);
+    throw new ApiError(500, "storage_error", "Fayl yuklash uchun ruxsat olinmadi.");
   }
+  return { path: data.path, token: data.token };
 }
 
-export async function deleteObject(path: string): Promise<void> {
-  await bucket()
-    .file(path)
-    .delete({ ignoreNotFound: true })
-    .catch((e) => console.warn("[storage] delete failed", path, e));
+export async function objectMeta(bucket: string, path: string): Promise<{ size: number; contentType: string } | null> {
+  const { data, error } = await sb().storage.from(bucket).info(path);
+  if (error || !data) return null;
+  return { size: Number(data.size ?? 0), contentType: String(data.contentType ?? "") };
+}
+
+export async function deleteObject(bucket: string, path: string): Promise<void> {
+  const { error } = await sb().storage.from(bucket).remove([path]);
+  if (error) console.warn("[storage] delete failed", bucket, path, error);
 }

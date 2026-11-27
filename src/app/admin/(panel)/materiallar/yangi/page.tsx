@@ -8,7 +8,7 @@ import { adminApi } from "@/lib/admin-api";
 import { uploadBooklet } from "@/lib/admin-upload";
 import { errorText } from "@/lib/api";
 import type { BookletReport } from "@/lib/booklet";
-import { clientConfigured } from "@/lib/firebase/client";
+import { clientConfigured } from "@/lib/supabase/client";
 import { range, taskNumbers } from "@/lib/formats";
 import { cx } from "@/lib/format-utils";
 import { MODE_LABEL, type MaterialMode, type SubjectWithFormat } from "@/lib/types";
@@ -64,7 +64,7 @@ export default function NewMaterial() {
 
   if (loadErr) return <Alert tone="error" title="Ma’lumotlarni yuklab bo‘lmadi">{loadErr}</Alert>;
   if (!subjects) return <PageLoader />;
-  if (!clientConfigured) return <Alert tone="warn" title="Firebase client sozlanmagan">NEXT_PUBLIC_FIREBASE_* o‘zgaruvchilarini kiriting — fayllar Firebase Storage’ga yuklanadi.</Alert>;
+  if (!clientConfigured) return <Alert tone="warn" title="Supabase sozlanmagan">NEXT_PUBLIC_SUPABASE_URL va ochiq kalitni kiriting — fayllar Supabase Storage’ga yuklanadi.</Alert>;
 
   const rangeErr = mode !== "full" && format && (from < 1 || to > format.totalTasks || from > to) ? `Oraliq 1–${format.totalTasks} ichida va “dan” ≤ “gacha” bo‘lishi kerak.` : null;
   const canSubmit = !!report && !!format && title.trim().length >= 3 && !rangeErr && (mode === "full" || !timed || minutes >= 1) && stage === "idle";
@@ -222,7 +222,7 @@ export default function NewMaterial() {
         <div className="min-w-48 flex-1">
           {stage === "uploading" ? (
             <>
-              <p className="mb-1 text-sm">Firebase Storage’ga yuklanmoqda… {progress}%</p>
+              <p className="mb-1 text-sm">Supabase Storage’ga yuklanmoqda… {progress}%</p>
               <ProgressBar value={progress} tone="accent" label="Yuklash jarayoni" />
             </>
           ) : stage === "saving" ? (

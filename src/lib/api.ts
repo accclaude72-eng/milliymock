@@ -1,6 +1,13 @@
 "use client";
 
-import { candidateAuth, clientConfigured } from "./firebase/client";
+import { clientConfigured, supabase } from "./supabase/client";
+
+/** Current Supabase access token (auto-refreshed by supabase-js), or null when signed out. */
+export async function accessToken(): Promise<string | null> {
+  if (!clientConfigured) return null;
+  const { data } = await supabase().auth.getSession();
+  return data.session?.access_token ?? null;
+}
 
 export class ApiClientError extends Error {
   constructor(
@@ -15,7 +22,7 @@ export class ApiClientError extends Error {
 interface Opts {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
-  /** Attach the candidate's Firebase ID token. Default true. */
+  /** Attach the candidate's Supabase access token. Default true. */
   auth?: boolean;
   signal?: AbortSignal;
   keepalive?: boolean;
@@ -26,8 +33,8 @@ export async function api<T>(path: string, opts: Opts = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (opts.auth !== false && clientConfigured) {
-    const user = candidateAuth().currentUser;
-    if (user) headers.Authorization = `Bearer ${await user.getIdToken()}`;
+    const token = await accessToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
   }
   let res: Response;
   try {

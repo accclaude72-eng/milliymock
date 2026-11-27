@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/server/admin-session";
-import { db } from "@/lib/server/firebase-admin";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
-import { COL, audit, getFormat, getSubject } from "@/lib/server/repo";
+import { audit, getFormat, getSubject } from "@/lib/server/repo";
+import { BUCKET, T, insertDoc, must, newId, sb } from "@/lib/server/supabase";
 import { HtmlUploadSchema, MaterialCreateSchema } from "@/lib/server/schemas";
 import { deriveFormat, taskNumbers } from "@/lib/formats";
 import { objectMeta } from "@/lib/server/storage";
@@ -13,10 +13,15 @@ const MAX_HTML_BYTES = 50 * 1024 * 1024;
 
 export const GET = route(async () => {
   await requireAdmin();
-  const snap = await db().collection(COL.materials).orderBy("createdAt", "desc").limit(500).get();
+  const [mats, atts] = await Promise.all([
+    sb().from(T.materials).select("doc").order("created_ms", { ascending: false }).limit(500),
+    sb().from(T.attempts).select("material_id"),
+  ]);
+  const counts = new Map<string, number>();
+  for (const r of must(atts, "attempts") ?? []) counts.set(r.material_id, (counts.get(r.material_id) ?? 0) + 1);
   return ok(
-    snap.docs.map((d) => {
-      const m = d.data() as Material;
+    (must(mats, "materials") ?? []).map((r) => {
+      const m = r.doc as Material;
       return {
         id: m.id,
         title: m.title,
@@ -28,7 +33,7 @@ export const GET = route(async () => {
         status: m.status,
         keyComplete: m.keyStatus.complete,
         problems: m.keyStatus.problems.length,
-        attemptsCount: m.attemptsCount ?? 0,
+        attemptsCount: counts.get(m.id) ?? 0,
         fileName: m.html?.fileName ?? null,
         size: m.html?.size ?? 0,
         createdAt: m.createdAt,
@@ -63,12 +68,12 @@ export const POST = route(async (req) => {
     range = body.range;
     format = deriveFormat(base, range.from, range.to, timed ? body.minutes : null, body.mode);
   }
-  const meta = await objectMeta(body.html.path);
+  const meta = await objectMeta(BUCKET.booklets, body.html.path);
   if (!meta) throw new ApiError(400, "upload_missing", "Yuklangan HTML fayl Storage’da topilmadi. Qayta yuklang.");
   if (!meta.contentType.startsWith("text/html")) throw new ApiError(400, "bad_type", "Fayl HTML formatida emas.");
   if (meta.size > MAX_HTML_BYTES) throw new ApiError(400, "too_large", "HTML fayl 50 MB dan katta.");
 
-  const ref = db().collection(COL.materials).doc();
+  const ref = { id: newId() };
   const now = Date.now();
   const structure = defaultStructure(format);
   const material: Material = {
@@ -93,10 +98,8 @@ export const POST = route(async (req) => {
     updatedAt: now,
     publishedAt: null,
   };
-  const batch = db().batch();
-  batch.set(ref, material);
-  batch.set(db().collection(COL.materialKeys).doc(ref.id), { items: {}, updatedAt: now });
-  await batch.commit();
+  await insertDoc(T.materials, ref.id, material);
+  await insertDoc(T.keys, ref.id, { items: {}, updatedAt: now });
   await audit("material.create", `materials/${ref.id}`, { title: material.title, subject: subject.code, file: body.html.fileName });
   return ok({ id: ref.id }, 201);
 });

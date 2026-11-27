@@ -1,12 +1,10 @@
 "use client";
 
-import { sendPasswordResetEmail } from "firebase/auth";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, EmptyState, Modal, PageLoader, Spinner } from "@/components/ui";
 import { adminApi } from "@/lib/admin-api";
 import { errorText } from "@/lib/api";
-import { candidateAuth, clientConfigured } from "@/lib/firebase/client";
 import { cx, fmtDateTime, fmtNum } from "@/lib/format-utils";
 import { ATTEMPT_STATUS_LABEL, type AttemptStatus, type Profile } from "@/lib/types";
 
@@ -169,7 +167,7 @@ export default function UsersAdmin() {
                 </div>
               ))}
             </dl>
-            {clientConfigured && (
+            {(
               <button
                 type="button"
                 className="btn btn-sm"
@@ -177,7 +175,7 @@ export default function UsersAdmin() {
                 onClick={async () => {
                   setBusy(true);
                   try {
-                    await sendPasswordResetEmail(candidateAuth(), detail.profile.email);
+                    await adminApi(`/api/admin/users/${detail.profile.uid}`, { method: "PATCH", body: { action: "reset_password" } });
                     setNote(`Parolni tiklash havolasi ${detail.profile.email} manziliga yuborildi.`);
                     setDetail(null);
                   } catch (e) {

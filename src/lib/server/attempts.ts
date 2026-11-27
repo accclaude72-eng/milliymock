@@ -1,14 +1,13 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type { Transaction } from "firebase-admin/firestore";
 import { OPTION_LETTERS, formatIncludes, sectionIndexOf, taskTypeOf } from "../formats";
 import { type AnswerValue, type Answers, gradeAttempt, summarize } from "../grading";
 import { buildSheet } from "../sheet";
 import { advance, currentDeadline, finishAll, initTiming, reconcile, timeSpentMs, type TimingState } from "../timing";
 import type { Attempt, AttemptStatus, FileMeta, Material, MaterialKeyDoc, PlayerViewT, Profile, QuestionSheetItem } from "../types";
-import { db } from "./firebase-admin";
 import { ApiError } from "./http";
-import { COL } from "./repo";
+import { attemptsOf, getKey, getMaterial } from "./repo";
+import { T, getDoc, insertDoc, newId, updateIfRev } from "./supabase";
 
 export const CLIENT_STALE_MS = 25_000;
 export const MAX_O2_FILES = 5;
@@ -20,28 +19,26 @@ const MAX_O2_TEXT = 20_000;
 /* ------------------------------------------------------------- start */
 
 export async function startAttempt(profile: Profile, materialId: string): Promise<{ attemptId: string; resumed: boolean }> {
-  const f = db();
-  const matRef = f.collection(COL.materials).doc(materialId);
-  const existing = await f.collection(COL.attempts).where("uid", "==", profile.uid).where("materialId", "==", materialId).get();
-  const inProgress = existing.docs.find((d) => d.get("status") === "in_progress");
-  if (inProgress) {
-    // Resume — but reconcile first; it may have expired meanwhile.
-    const st = await withAttempt(inProgress.id, profile.uid, async () => ({}));
-    if (st.status === "in_progress") return { attemptId: inProgress.id, resumed: true };
-  }
-  return f.runTransaction(async (tx) => {
-    const matSnap = await tx.get(matRef);
-    if (!matSnap.exists) throw new ApiError(404, "material_not_found", "Test materiali topilmadi.");
-    const m = matSnap.data() as Material;
+  for (let tries = 0; tries < 3; tries++) {
+    const existing = (await attemptsOf({ uid: profile.uid })).filter((a) => a.materialId === materialId);
+    const inProgress = existing.find((a) => a.status === "in_progress");
+    if (inProgress) {
+      // Resume — but reconcile first; it may have expired meanwhile.
+      const st = await withAttempt(inProgress.id, profile.uid, async () => ({}));
+      if (st.status === "in_progress") return { attemptId: inProgress.id, resumed: true };
+    }
+    const m: Material = await getMaterial(materialId).catch(() => {
+      throw new ApiError(404, "material_not_found", "Test materiali topilmadi.");
+    });
     if (m.status !== "published") throw new ApiError(403, "not_published", "Bu test hozircha mavjud emas.");
     if (!m.html) throw new ApiError(409, "no_booklet", "Test kitobchasi yuklanmagan.");
     if (!m.keyStatus.complete) throw new ApiError(409, "key_incomplete", "Bu test hali to‘liq tayyor emas.");
-    const finishedCount = existing.docs.filter((d) => d.get("status") !== "in_progress").length;
+    const finishedCount = existing.filter((a) => a.status !== "in_progress").length;
     if (m.attemptLimit != null && finishedCount >= m.attemptLimit)
       throw new ApiError(403, "attempt_limit", `Bu test uchun urinishlar chegarasi (${m.attemptLimit}) tugagan.`);
 
     const now = Date.now();
-    const ref = f.collection(COL.attempts).doc();
+    const ref = { id: newId() };
     const durations = m.format.sections.map((s) => (m.timed ? s.minutes * 60_000 : null));
     const attempt: Attempt = {
       id: ref.id,
@@ -73,15 +70,32 @@ export async function startAttempt(profile: Profile, materialId: string): Promis
       publishedAt: null,
       rev: 0,
     };
-    tx.set(ref, attempt);
-    tx.update(matRef, { attemptsCount: (m.attemptsCount ?? 0) + 1 });
-    return { attemptId: ref.id, resumed: false };
-  });
+    // A unique index allows only one running attempt per candidate+test; a lost race retries and resumes.
+    if (await insertDoc(T.attempts, ref.id, attempt)) return { attemptId: ref.id, resumed: false };
+  }
+  throw new ApiError(409, "busy", "Urinishni boshlab bo‘lmadi. Qayta urinib ko‘ring.");
 }
 
-/* ------------------------------------------------------ transactional core */
+/* ------------------------------------------------------ concurrency core */
 
-type Mutator = (a: Attempt, now: number, tx: Transaction) => Promise<Partial<Attempt>> | Partial<Attempt>;
+type Mutator = (a: Attempt, now: number) => Promise<Partial<Attempt>> | Partial<Attempt>;
+
+/**
+ * Optimistic read-modify-write on an attempt: the write only lands if nobody else changed
+ * the row in between (same `rev`); otherwise it re-reads and retries.
+ */
+export async function updateAttempt(id: string, fn: (a: Attempt) => Promise<Partial<Attempt> | null> | Partial<Attempt> | null): Promise<Attempt> {
+  for (let tries = 0; tries < 6; tries++) {
+    const a = await getDoc<Attempt>(T.attempts, id);
+    if (!a) throw new ApiError(404, "attempt_not_found", "Urinish topilmadi.");
+    const patch = await fn(a);
+    if (!patch || !Object.keys(patch).length) return a;
+    const next: Attempt = { ...a, ...patch, rev: a.rev + 1 };
+    if (await updateIfRev(T.attempts, id, next, a.rev)) return next;
+    await new Promise((r) => setTimeout(r, 30 + Math.random() * 70));
+  }
+  throw new ApiError(409, "busy", "Server band. Bir necha soniyadan so‘ng qayta urinib ko‘ring.");
+}
 
 function pushStatus(a: Attempt, list: AttemptStatus[], at: number): Attempt["statusHistory"] {
   return [...(a.statusHistory ?? []), ...list.map((status) => ({ status, at }))];
@@ -116,31 +130,27 @@ export async function withAttempt(
   mutator: Mutator,
   opts: { finalize?: "manual" } = {},
 ): Promise<Attempt> {
-  const f = db();
-  const ref = f.collection(COL.attempts).doc(id);
-  return f.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new ApiError(404, "attempt_not_found", "Urinish topilmadi.");
-    const a = snap.data() as Attempt;
+  let key: MaterialKeyDoc | null | undefined;
+  let result: Attempt | null = null;
+  const saved = await updateAttempt(id, async (a) => {
     if (uid !== null && a.uid !== uid) throw new ApiError(404, "attempt_not_found", "Urinish topilmadi.");
-    const now = Date.now();
-
+    result = a;
     // Finished attempts are frozen: candidate mutations are never applied (idempotent double-submit too).
-    if (a.status !== "in_progress") return a;
-
+    if (a.status !== "in_progress") return null;
+    const now = Date.now();
     const r = opts.finalize ? finishAll(a.timing, now) : reconcile(a.timing, now);
     if (r.state.finished) {
-      const keySnap = await tx.get(f.collection(COL.materialKeys).doc(a.materialId));
-      const fields = finalizeFields(a, keySnap.exists ? (keySnap.data() as MaterialKeyDoc) : null, r.state, opts.finalize ?? "timeout", now);
-      tx.update(ref, { ...fields, rev: a.rev + 1 });
-      return { ...a, ...fields };
+      if (key === undefined) key = await getKey(a.materialId);
+      return finalizeFields(a, key, r.state, opts.finalize ?? "timeout", now);
     }
     const reconciled: Attempt = { ...a, timing: r.state };
-    const patch = await mutator(reconciled, now, tx);
+    const patch = await mutator(reconciled, now);
     const full = { ...patch, ...(r.changed && !patch.timing ? { timing: r.state } : {}) };
-    if (Object.keys(full).length) tx.update(ref, { ...full, rev: a.rev + 1 });
-    return { ...reconciled, ...full };
+    result = { ...reconciled, ...full };
+    return Object.keys(full).length ? full : null;
   });
+  // When nothing was written, return the reconciled in-memory view (e.g. fresh deadline).
+  return saved.rev !== (result as Attempt | null)?.rev ? saved : (result ?? saved);
 }
 
 /* ------------------------------------------------------------ validation */

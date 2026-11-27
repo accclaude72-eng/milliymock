@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/server/admin-session";
-import { db } from "@/lib/server/firebase-admin";
+import { updateAttempt } from "@/lib/server/attempts";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
-import { COL, audit } from "@/lib/server/repo";
-import type { Attempt } from "@/lib/types";
+import { audit } from "@/lib/server/repo";
 
 const Body = z.object({ action: z.enum(["publish", "unpublish"]) });
 
@@ -12,24 +11,17 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, { par
   await requireAdmin();
   const { id } = await params;
   const { action } = Body.parse(await readJson(req));
-  const f = db();
-  const ref = f.collection(COL.attempts).doc(id);
-  const status = await f.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new ApiError(404, "not_found", "Urinish topilmadi.");
-    const a = snap.data() as Attempt;
+  const a = await updateAttempt(id, (a) => {
     const now = Date.now();
     if (action === "publish") {
-      if (a.status === "published") return a.status;
+      if (a.status === "published") return null;
       if (a.status !== "graded") throw new ApiError(409, "not_graded", "E’lon qilishdan oldin barcha yozma ishlar va shubhali javoblar tekshirilishi kerak.");
-      tx.update(ref, { status: "published", publishedAt: now, statusHistory: [...a.statusHistory, { status: "published", at: now }], rev: a.rev + 1 });
-      return "published";
+      return { status: "published", publishedAt: now, statusHistory: [...a.statusHistory, { status: "published", at: now }] };
     }
-    if (a.status !== "published") return a.status;
+    if (a.status !== "published") return null;
     // Re-open for recheck. Auto-published attempts (no human review needed) go back to graded too.
-    tx.update(ref, { status: "graded", publishedAt: null, statusHistory: [...a.statusHistory, { status: "graded", at: now }], rev: a.rev + 1 });
-    return "graded";
+    return { status: "graded", publishedAt: null, statusHistory: [...a.statusHistory, { status: "graded", at: now }] };
   });
-  await audit(`result.${action}`, `attempts/${id}`, { status });
-  return ok({ status });
+  await audit(`result.${action}`, `attempts/${id}`, { status: a.status });
+  return ok({ status: a.status });
 });

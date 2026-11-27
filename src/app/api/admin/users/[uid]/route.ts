@@ -1,33 +1,29 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/server/admin-session";
-import { adminAuth, db } from "@/lib/server/firebase-admin";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
-import { COL, audit, getProfile } from "@/lib/server/repo";
-import type { Attempt } from "@/lib/types";
+import { attemptsOf, audit, getProfile, saveProfile } from "@/lib/server/repo";
+import { sb } from "@/lib/server/supabase";
 
 type Ctx = { params: Promise<{ uid: string }> };
 
 export const GET = route<Ctx>(async (_req, { params }) => {
   await requireAdmin();
   const { uid } = await params;
+  if (!/^[0-9a-f-]{36}$/i.test(uid)) throw new ApiError(404, "not_found", "Foydalanuvchi topilmadi.");
   const profile = await getProfile(uid);
   if (!profile) throw new ApiError(404, "not_found", "Foydalanuvchi topilmadi.");
-  const snap = await db().collection(COL.attempts).where("uid", "==", uid).get();
-  const attempts = snap.docs
-    .map((d) => d.data() as Attempt)
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .map((a) => ({
-      id: a.id,
-      materialTitle: a.materialTitle,
-      subjectName: a.subjectName,
-      status: a.status,
-      createdAt: a.createdAt,
-      percent: a.grading?.summary.percent ?? null,
-    }));
+  const attempts = (await attemptsOf({ uid })).map((a) => ({
+    id: a.id,
+    materialTitle: a.materialTitle,
+    subjectName: a.subjectName,
+    status: a.status,
+    createdAt: a.createdAt,
+    percent: a.grading?.summary.percent ?? null,
+  }));
   return ok({ profile, attempts });
 });
 
-const Body = z.object({ action: z.enum(["suspend", "activate"]) });
+const Body = z.object({ action: z.enum(["suspend", "activate", "reset_password"]) });
 
 export const PATCH = route<Ctx>(async (req, { params }) => {
   assertSameOrigin(req);
@@ -36,14 +32,20 @@ export const PATCH = route<Ctx>(async (req, { params }) => {
   const { action } = Body.parse(await readJson(req));
   const profile = await getProfile(uid);
   if (!profile) throw new ApiError(404, "not_found", "Foydalanuvchi topilmadi.");
-  const status = action === "suspend" ? "suspended" : "active";
-  await db().collection(COL.profiles).doc(uid).update({ status, updatedAt: Date.now() });
-  try {
-    await adminAuth().updateUser(uid, { disabled: action === "suspend" });
-    if (action === "suspend") await adminAuth().revokeRefreshTokens(uid);
-  } catch (e) {
-    console.error("[admin] auth update failed", e);
+
+  if (action === "reset_password") {
+    const site = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(req.url).origin;
+    const { error } = await sb().auth.resetPasswordForEmail(profile.email, { redirectTo: `${site}/parolni-yangilash` });
+    if (error) throw new ApiError(502, "mail_failed", "Xatni yuborib bo‘lmadi. Birozdan so‘ng urinib ko‘ring.");
+    await audit("user.reset_password", `profiles/${uid}`, { candidateId: profile.candidateId });
+    return ok({ sent: true });
   }
+
+  const status = action === "suspend" ? "suspended" : "active";
+  await saveProfile({ ...profile, status, updatedAt: Date.now() });
+  // Ban in Supabase Auth too, so existing sessions can no longer be refreshed.
+  const { error } = await sb().auth.admin.updateUserById(uid, { ban_duration: action === "suspend" ? "876000h" : "none" });
+  if (error) console.error("[admin] auth ban update failed", error);
   await audit(`user.${action}`, `profiles/${uid}`, { before: profile.status, after: status, candidateId: profile.candidateId });
   return ok({ status });
 });

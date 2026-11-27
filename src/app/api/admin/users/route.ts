@@ -1,7 +1,6 @@
 import { requireAdmin } from "@/lib/server/admin-session";
-import { db } from "@/lib/server/firebase-admin";
 import { ok, route } from "@/lib/server/http";
-import { COL } from "@/lib/server/repo";
+import { T, must, sb } from "@/lib/server/supabase";
 import type { Profile } from "@/lib/types";
 
 function csvCell(v: unknown): string {
@@ -31,15 +30,14 @@ export const GET = route(async (req) => {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
   const status = url.searchParams.get("status");
-  const f = db();
-  const [snap, attempts] = await Promise.all([
-    f.collection(COL.profiles).orderBy("createdAt", "desc").limit(2000).get(),
-    f.collection(COL.attempts).select("uid").get(),
+  const [profiles, attempts] = await Promise.all([
+    sb().from(T.profiles).select("doc").order("created_ms", { ascending: false }).limit(2000),
+    sb().from(T.attempts).select("user_id"),
   ]);
   const counts = new Map<string, number>();
-  for (const d of attempts.docs) counts.set(d.get("uid"), (counts.get(d.get("uid")) ?? 0) + 1);
+  for (const r of must(attempts, "attempts") ?? []) counts.set(r.user_id, (counts.get(r.user_id) ?? 0) + 1);
 
-  let users = snap.docs.map((d) => d.data() as Profile);
+  let users = (must(profiles, "profiles") ?? []).map((r) => r.doc as Profile);
   if (status === "active" || status === "suspended") users = users.filter((u) => u.status === status);
   if (q)
     users = users.filter((u) =>

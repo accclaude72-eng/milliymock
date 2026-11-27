@@ -1,16 +1,15 @@
+import { randomUUID } from "node:crypto";
 import { requireAdmin } from "@/lib/server/admin-session";
-import { adminAuth } from "@/lib/server/firebase-admin";
 import { ok, route } from "@/lib/server/http";
-
-const ADMIN_STORAGE_UID = "milliy-mock-admin-uploader";
+import { uploadUrl } from "@/lib/server/storage";
+import { BUCKET } from "@/lib/server/supabase";
 
 /**
- * Issues a Firebase custom token (claim admin=true) so the admin browser can upload
- * large HTML booklets straight to Firebase Storage. Storage rules only allow writes
- * under materials/ for tokens carrying this claim.
+ * Issues a one-time signed upload URL into the private `booklets` bucket, so the admin
+ * browser can upload large HTML booklets straight to Supabase Storage.
  */
 export const GET = route(async () => {
   await requireAdmin();
-  const token = await adminAuth().createCustomToken(ADMIN_STORAGE_UID, { admin: true });
-  return ok({ token });
+  const path = `materials/${randomUUID().replace(/-/g, "")}/booklet.html`;
+  return ok({ bucket: BUCKET.booklets, ...(await uploadUrl(BUCKET.booklets, path)) });
 });

@@ -1,15 +1,12 @@
 import { withAttempt } from "@/lib/server/attempts";
-import { db } from "@/lib/server/firebase-admin";
 import { ok, route } from "@/lib/server/http";
-import { COL } from "@/lib/server/repo";
+import { attemptsOf } from "@/lib/server/repo";
 import { requireCandidate } from "@/lib/server/user-auth";
 import { currentDeadline, timeSpentMs } from "@/lib/timing";
-import type { Attempt } from "@/lib/types";
 
 export const GET = route(async (req) => {
   const { user } = await requireCandidate(req);
-  const snap = await db().collection(COL.attempts).where("uid", "==", user.uid).get();
-  let attempts = snap.docs.map((d) => d.data() as Attempt);
+  let attempts = await attemptsOf({ uid: user.uid });
 
   // Lazily finalize attempts whose server-side time has already run out.
   const now = Date.now();

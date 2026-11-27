@@ -1,8 +1,7 @@
 import { requireAdmin } from "@/lib/server/admin-session";
 import { withAttempt } from "@/lib/server/attempts";
-import { db } from "@/lib/server/firebase-admin";
 import { ok, route } from "@/lib/server/http";
-import { COL } from "@/lib/server/repo";
+import { T, must, sb } from "@/lib/server/supabase";
 import { currentDeadline } from "@/lib/timing";
 import type { Attempt } from "@/lib/types";
 
@@ -12,8 +11,7 @@ export const GET = route(async (req) => {
   const status = url.searchParams.get("status");
   const subject = url.searchParams.get("subject");
   const materialId = url.searchParams.get("materialId");
-  const snap = await db().collection(COL.attempts).orderBy("createdAt", "desc").limit(1000).get();
-  let list = snap.docs.map((d) => d.data() as Attempt);
+  let list = (must(await sb().from(T.attempts).select("doc").order("created_ms", { ascending: false }).limit(1000), "attempts") ?? []).map((r) => r.doc as Attempt);
 
   const now = Date.now();
   const expired = list.filter((a) => a.status === "in_progress" && (currentDeadline(a.timing) ?? Infinity) <= now);

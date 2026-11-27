@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/server/admin-session";
-import { db } from "@/lib/server/firebase-admin";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
-import { COL, audit } from "@/lib/server/repo";
+import { audit } from "@/lib/server/repo";
+import { T, getDoc, upsertDoc } from "@/lib/server/supabase";
 import { type ExamFormat, validateFormat } from "@/lib/formats";
 
 const TaskType = z.enum(["Y1", "Y2", "O1", "O", "O2"]);
@@ -34,14 +34,12 @@ export const PATCH = route<{ params: Promise<{ id: string }> }>(async (req, { pa
   await requireAdmin();
   const { id } = await params;
   const body = Edit.parse(await readJson(req));
-  const ref = db().collection(COL.formats).doc(id);
-  const snap = await ref.get();
-  if (!snap.exists) throw new ApiError(404, "not_found", "Format topilmadi.");
-  const before = snap.data() as ExamFormat;
+  const before = await getDoc<ExamFormat>(T.formats, id);
+  if (!before) throw new ApiError(404, "not_found", "Format topilmadi.");
   const next: ExamFormat = { ...before, ...body, id, updatedAt: Date.now() };
   const problems = validateFormat(next);
   if (problems.length) throw new ApiError(400, "invalid_format", problems.slice(0, 5).join(" "));
-  await ref.set(next);
+  await upsertDoc(T.formats, id, next);
   await audit("format.update", `formats/${id}`, {
     before: { totalTasks: before.totalTasks, totalMinutes: before.totalMinutes, o2: before.o2Tasks, y2Scoring: before.y2Scoring },
     after: { totalTasks: next.totalTasks, totalMinutes: next.totalMinutes, o2: next.o2Tasks, y2Scoring: next.y2Scoring },

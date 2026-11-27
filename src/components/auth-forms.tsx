@@ -1,14 +1,5 @@
 "use client";
 
-import {
-  GoogleAuthProvider,
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  updateProfile,
-} from "firebase/auth";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,7 +7,7 @@ import { useAuth } from "./auth-provider";
 import { NotConfigured } from "./guards";
 import { Alert, Logo, Spinner } from "./ui";
 import { api, errorText } from "@/lib/api";
-import { authErrorMessage, candidateAuth } from "@/lib/firebase/client";
+import { authErrorMessage, siteUrl, supabase } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 
 export const REGIONS = [
@@ -64,7 +55,8 @@ export function AuthShell({ title, subtitle, children, aside }: { title: string;
   );
 }
 
-function GoogleButton({ onDone }: { onDone: () => void }) {
+function GoogleButton({ returnTo }: { returnTo: string }) {
+  const onDone = () => returnTo;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   if (!GOOGLE_ENABLED) return null;
@@ -80,12 +72,10 @@ function GoogleButton({ onDone }: { onDone: () => void }) {
         onClick={async () => {
           setBusy(true);
           setErr(null);
-          try {
-            await signInWithPopup(candidateAuth(), new GoogleAuthProvider());
-            onDone();
-          } catch (e) {
-            setErr(authErrorMessage(e));
-          } finally {
+          // Full-page redirect to Google; the session is picked up when the user returns.
+          const { error } = await supabase().auth.signInWithOAuth({ provider: "google", options: { redirectTo: siteUrl(onDone()) } });
+          if (error) {
+            setErr(authErrorMessage(error));
             setBusy(false);
           }
         }}
@@ -119,11 +109,10 @@ export function SignInForm() {
     e.preventDefault();
     setBusy(true);
     setErr(null);
-    try {
-      await signInWithEmailAndPassword(candidateAuth(), email.trim(), password);
-      // redirect handled by the effect once the profile is loaded
-    } catch (e) {
-      setErr(authErrorMessage(e));
+    const { error } = await supabase().auth.signInWithPassword({ email: email.trim(), password });
+    // On success the redirect is handled by the effect once the profile is loaded.
+    if (error) {
+      setErr(authErrorMessage(error));
       setBusy(false);
     }
   };
@@ -153,7 +142,7 @@ export function SignInForm() {
           {busy && <Spinner />} Kirish
         </button>
       </form>
-      <GoogleButton onDone={() => undefined} />
+      <GoogleButton returnTo={next} />
       <p className="mt-6 text-sm text-ink-2">
         Hisobingiz yo‘qmi?{" "}
         <Link href={`/royxatdan-otish${next !== "/kabinet" ? `?keyin=${encodeURIComponent(next)}` : ""}`} className="link font-semibold">
@@ -259,12 +248,27 @@ export function SignUpForm() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [confirmSent, setConfirmSent] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user && profile && !creating) router.replace(next);
   }, [loading, user, profile, next, router, creating]);
 
   if (!configured) return <NotConfigured />;
+  if (confirmSent)
+    return (
+      <AuthShell title="Emailni tasdiqlang">
+        <Alert tone="ok" title="Hisob yaratildi">
+          <b>{confirmSent}</b> manziliga tasdiqlash havolasi yuborildi. Havolani bosing — shundan so‘ng tizimga kirasiz va Candidate ID beriladi. “Spam” papkasini ham
+          tekshiring.
+        </Alert>
+        <p className="mt-6 text-sm">
+          <Link href="/kirish" className="link font-semibold">
+            Kirish sahifasi
+          </Link>
+        </p>
+      </AuthShell>
+    );
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,15 +283,26 @@ export function SignUpForm() {
     setCreating(true);
     setErr(null);
     try {
-      const cred = await createUserWithEmailAndPassword(candidateAuth(), email.trim(), password);
-      await updateProfile(cred.user, { displayName: `${v.firstName.trim()} ${v.lastName.trim()}` }).catch(() => undefined);
-      sendEmailVerification(cred.user).catch(() => undefined);
+      // Profile fields travel in user metadata, so the profile can be created on first login
+      // even when e-mail confirmation is required before a session exists.
+      const { data, error } = await supabase().auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: siteUrl("/kabinet"), data: { full_name: `${v.firstName.trim()} ${v.lastName.trim()}`, profile: v } },
+      });
+      if (error) throw Object.assign(error, { isAuth: true });
+      if (!data.session) {
+        // E-mail confirmation is enabled in Supabase: ask the user to click the link first.
+        setConfirmSent(email.trim());
+        setBusy(false);
+        setCreating(false);
+        return;
+      }
       await api<{ profile: Profile }>("/api/me", { method: "POST", body: v });
       await refreshProfile();
       router.replace(next);
     } catch (e) {
-      const code = (e as { code?: string }).code;
-      if (code?.startsWith("auth/")) setErr(authErrorMessage(e));
+      if ((e as { isAuth?: boolean }).isAuth) setErr(authErrorMessage(e));
       else {
         // Account exists but profile provisioning failed — the profile page lets them retry.
         setErr(`Hisob yaratildi, lekin profilni saqlab bo‘lmadi: ${errorText(e)}`);
@@ -348,7 +363,7 @@ export function SignUpForm() {
           {busy && <Spinner />} Hisob ochish
         </button>
       </form>
-      <GoogleButton onDone={() => router.replace(`/kabinet/profil?keyin=${encodeURIComponent(next)}`)} />
+      <GoogleButton returnTo={`/kabinet/profil?keyin=${encodeURIComponent(next)}`} />
       <p className="mt-6 text-sm text-ink-2">
         Hisobingiz bormi?{" "}
         <Link href="/kirish" className="link font-semibold">
@@ -383,13 +398,10 @@ export function ResetForm() {
             setBusy(true);
             setErr(null);
             try {
-              await sendPasswordResetEmail(candidateAuth(), email.trim());
-              setSent(true);
-            } catch (e) {
-              const code = (e as { code?: string }).code;
-              // Do not reveal whether an account exists.
-              if (code === "auth/user-not-found") setSent(true);
-              else setErr(authErrorMessage(e));
+              // Supabase never reveals whether an account exists for this address.
+              const { error } = await supabase().auth.resetPasswordForEmail(email.trim(), { redirectTo: siteUrl("/parolni-yangilash") });
+              if (error) setErr(authErrorMessage(error));
+              else setSent(true);
             } finally {
               setBusy(false);
             }

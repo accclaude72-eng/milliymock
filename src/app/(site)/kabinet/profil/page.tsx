@@ -1,11 +1,11 @@
 "use client";
 
-import { type User, sendEmailVerification } from "firebase/auth";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { type ProfileFields, ProfileFieldset, safeNext, validateProfile } from "@/components/auth-forms";
-import { useAuth } from "@/components/auth-provider";
+import { type AppUser as User, useAuth } from "@/components/auth-provider";
+import { siteUrl, supabase } from "@/lib/supabase/client";
 import { NotConfigured } from "@/components/guards";
 import { Alert, PageLoader, Spinner } from "@/components/ui";
 import { api, errorText } from "@/lib/api";
@@ -45,8 +45,16 @@ function initialFields(profile: Profile | null, user: User): ProfileFields {
       institution: profile.institution ?? "",
       grade: profile.grade ?? "",
     };
+  const p = user.pendingProfile ?? {};
   const [f = "", ...rest] = (user.displayName ?? "").split(" ");
-  return { firstName: f, lastName: rest.join(" "), phone: "", region: "", institution: "", grade: "" };
+  return {
+    firstName: p.firstName ?? f,
+    lastName: p.lastName ?? rest.join(" "),
+    phone: p.phone ?? "",
+    region: p.region ?? "",
+    institution: p.institution ?? "",
+    grade: p.grade ?? "",
+  };
 }
 
 function ProfileForm({ user, profile, next }: { user: User; profile: Profile | null; next: string }) {
@@ -115,7 +123,8 @@ function ProfileForm({ user, profile, next }: { user: User; profile: Profile | n
             disabled={verifySent}
             onClick={async () => {
               try {
-                await sendEmailVerification(user);
+                const { error } = await supabase().auth.resend({ type: "signup", email: user.email, options: { emailRedirectTo: siteUrl("/kabinet") } });
+                if (error) throw error;
                 setVerifySent(true);
               } catch {
                 setMsg({ tone: "error", text: "Xatni hozir yuborib bo‘lmadi. Birozdan so‘ng urinib ko‘ring." });

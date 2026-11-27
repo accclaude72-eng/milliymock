@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/server/admin-session";
-import { db } from "@/lib/server/firebase-admin";
+import { updateAttempt } from "@/lib/server/attempts";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
-import { COL, audit } from "@/lib/server/repo";
+import { audit, getKey } from "@/lib/server/repo";
 import { taskTypeOf } from "@/lib/formats";
 import { type KeyO2, type QuestionResult, summarize, totalO2 } from "@/lib/grading";
-import type { Attempt, AttemptStatus, MaterialKeyDoc, O2ReviewRecord } from "@/lib/types";
+import type { Attempt, AttemptStatus, O2ReviewRecord } from "@/lib/types";
 
 const O2Review = z.object({
   m: z.number().min(0).max(100).default(0),
@@ -26,18 +26,13 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, { par
   await requireAdmin();
   const { id } = await params;
   const body = Body.parse(await readJson(req));
-  const f = db();
-  const ref = f.collection(COL.attempts).doc(id);
   const changes: Record<string, unknown>[] = [];
 
-  const updated = await f.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new ApiError(404, "not_found", "Urinish topilmadi.");
-    const a = snap.data() as Attempt;
+  const updated = await updateAttempt(id, async (a) => {
+    changes.length = 0; // reset on optimistic retry
     if (a.status !== "pending_review" && a.status !== "graded")
       throw new ApiError(409, "bad_status", a.status === "published" ? "Natija e’lon qilingan. Avval e’lonni bekor qiling." : "Bu urinish hali tekshiruvga tayyor emas.");
-    const keySnap = await tx.get(f.collection(COL.materialKeys).doc(a.materialId));
-    const key = keySnap.exists ? (keySnap.data() as MaterialKeyDoc).items : {};
+    const key = (await getKey(a.materialId))?.items ?? {};
     const now = Date.now();
 
     const questions: QuestionResult[] = (a.grading?.questions ?? []).map((q) => ({ ...q }));
@@ -85,11 +80,9 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, { par
       grading: { questions, summary },
       o2Reviews,
       status,
-      rev: a.rev + 1,
     };
     if (status !== a.status) patch.statusHistory = [...(a.statusHistory ?? []), { status, at: now }];
-    tx.update(ref, patch);
-    return { ...a, ...patch } as Attempt;
+    return patch;
   });
 
   await audit("review.save", `attempts/${id}`, { changes, status: updated.status });
