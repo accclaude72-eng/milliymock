@@ -42,3 +42,6 @@ next-env.d.ts
 
 !.env.example
 
+
+# Test content (answer keys!) - never commit to the public repo
+/content/
