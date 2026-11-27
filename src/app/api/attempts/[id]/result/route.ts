@@ -2,7 +2,8 @@ import { withAttempt } from "@/lib/server/attempts";
 import { ApiError, ok, route } from "@/lib/server/http";
 import { getKey } from "@/lib/server/repo";
 import { candidateResult } from "@/lib/server/results";
-import { T, getDoc } from "@/lib/server/supabase";
+import { readUrl } from "@/lib/server/storage";
+import { BUCKET, T, getDoc } from "@/lib/server/supabase";
 import { requireCandidate } from "@/lib/server/user-auth";
 import type { Material } from "@/lib/types";
 
@@ -18,5 +19,7 @@ export const GET = route<{ params: Promise<{ id: string }> }>(async (req, { para
     const items = (await getKey(a.materialId))?.items ?? {};
     key = material?.revealAnswers ? items : Object.fromEntries(Object.entries(items).filter(([, v]) => v.type === "O2"));
   }
-  return ok(candidateResult(a, material, key));
+  // Short-lived link so the candidate can review their marks inside the booklet itself.
+  const bookletUrl = a.bookletPath ? await readUrl(BUCKET.booklets, a.bookletPath, 30 * 60).catch(() => null) : null;
+  return ok({ ...candidateResult(a, material, key), bookletUrl });
 });

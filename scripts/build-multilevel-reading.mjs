@@ -25,7 +25,13 @@ const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, 
 // Cyrillic look-alikes used as option letters in the source (В → B, А → A, С → C)
 const latin = (s) => s.replace(/^[А]/, "A").replace(/^[В]/, "B").replace(/^[С]/, "C");
 const join = (ls) => ls.map((l) => l.text).join(" ").replace(/\s+/g, " ").trim();
-const gap = (n) => `<span class="gap"><b>${n}</b></span>`;
+// Interactive marking: [data-q] holds one answer; inside it [data-opt] buttons, or the element is itself an <input>.
+const gap = (n) => `<span class="gap"><b>${n}</b><input class="ans-in" data-q="${n}" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" aria-label="Answer ${n}"></span>`;
+const LET = "ABCDEFGHIJ";
+const pick = (n, count, labels = {}) =>
+  `<div class="pick" data-q="${n}" role="group" aria-label="Answer ${n}"><span class="pick-n">${n}</span>${[...LET.slice(0, count)]
+    .map((L) => `<button type="button" data-opt="${L}">${L}${labels[L] ? `<span>${labels[L]}</span>` : ""}</button>`)
+    .join("")}</div>`;
 const fail = (msg) => {
   console.error("✗ " + msg);
   process.exit(1);
@@ -196,7 +202,8 @@ for (let n = 30; n <= 33; n++) {
 if (problems.length) fail("answer key / layout problems:\n  " + problems.join("\n  "));
 
 /* ---------------------------------------------------------------- HTML */
-const opts = (q) => `<ul class="opts">${q.opts.map(([L, t]) => `<li><b>${L}</b>${esc(t)}</li>`).join("")}</ul>`;
+const opts = (q) =>
+  `<ul class="opts" data-q="${q.n}">${q.opts.map(([L, t]) => `<li><button type="button" class="opt" data-opt="${L}"><b>${L}</b><span>${esc(t)}</span></button></li>`).join("")}</ul>`;
 const part = (n, label, range) => `<h2 class="stage">Part ${n}<small>${label} · ${range}</small></h2>`;
 const body = [];
 
@@ -206,7 +213,7 @@ body.push(
   part(2, "Matching", "7–14"),
   instr(p2Instr),
   `<div class="task"><ol class="letters">${statements.map((m) => `<li><b>${m[1]}</b>${esc(m[2])}</li>`).join("")}</ol></div>`,
-  `<div class="ads">${adverts.map(([n, src]) => `<figure class="ad" id="t${n}"><figcaption>${n}</figcaption><img src="${src}" alt="Text ${n}"></figure>`).join("")}</div>`,
+  `<div class="ads">${adverts.map(([n, src]) => `<figure class="ad" id="t${n}"><figcaption>${n}</figcaption><img src="${src}" alt="Text ${n}">${pick(n, 10)}</figure>`).join("")}</div>`,
 );
 
 body.push(
@@ -216,7 +223,7 @@ body.push(
   `<article class="passage">${p3Title ? `<h3>${esc(p3Title)}</h3>` : ""}${paras3
     .map(([roman, ls]) => {
       const n = p3Items.find((it) => it[1] === roman)?.[0];
-      return `<p class="para" id="t${n}"><span class="pn">${n ? `${n} · ` : ""}${roman}</span>${esc(join(ls))}</p>`;
+      return `<div class="para" id="t${n}">${n ? pick(n, headings.length) : ""}<p><span class="pn">${roman}</span>${esc(join(ls))}</p></div>`;
     })
     .join("")}</article>`,
 );
@@ -229,7 +236,7 @@ body.push(
   ...mcq4.map((q) => `<section class="task" id="t${q.n}"><p class="q"><b>${q.n}.</b> ${esc(q.q)}</p>${opts(q)}</section>`),
   instr(p4BlockB),
   `<p class="tfkey"><b>A</b> True <b>B</b> False <b>C</b> No Information</p>`,
-  ...tf.map((q) => `<section class="task" id="t${q.n}"><p class="q"><b>${q.n}.</b> ${esc(q.q)}</p></section>`),
+  ...tf.map((q) => `<section class="task" id="t${q.n}"><p class="q"><b>${q.n}.</b> ${esc(q.q)}</p>${pick(q.n, 3, { A: "True", B: "False", C: "No Information" })}</section>`),
 );
 
 body.push(
@@ -241,6 +248,98 @@ body.push(
   instr(mcq5Instr),
   ...mcq5.map((q) => `<section class="task" id="t${q.n}"><p class="q"><b>${q.n}.</b> ${esc(q.q)}</p>${opts(q)}</section>`),
 );
+
+// Booklet side of the platform bridge (see src/components/booklet-frame.tsx). Runs in an opaque-origin
+// sandbox: it only exchanges answers with the parent window. Without a parent it works as a local scratch pad.
+const BRIDGE_JS = `(function () {
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var bridged = window.parent !== window;
+  var st = { locked: false, editable: null, answers: {} };
+  var marks = null;
+  var timers = {};
+  function send(m) { if (bridged) window.parent.postMessage(m, "*"); }
+  function canEdit(n) { return !marks && !st.locked && (!st.editable || !!st.editable[n]); }
+  function setLocal(n, v) { if (v === null || v === "") delete st.answers[n]; else st.answers[n] = v; }
+  function render() {
+    var c = { correct: 0, incorrect: 0, unanswered: 0 };
+    $$("[data-q]").forEach(function (box) {
+      var n = box.getAttribute("data-q");
+      var mk = marks ? marks[n] : null;
+      var val = marks ? (mk && mk.answer) || "" : st.answers[n] || "";
+      if (mk && mk.status === "correct") c.correct++;
+      else if (mk && mk.status === "unanswered") c.unanswered++;
+      else if (mk && (mk.status === "incorrect" || mk.status === "partial")) c.incorrect++;
+      box.classList.toggle("ok", !!mk && mk.status === "correct");
+      box.classList.toggle("bad", !!mk && (mk.status === "incorrect" || mk.status === "partial"));
+      box.classList.toggle("miss", !!mk && mk.status === "unanswered");
+      if (box.tagName === "INPUT") {
+        if (document.activeElement !== box) box.value = val;
+        box.readOnly = !canEdit(n);
+        var fix = box.parentNode.querySelector(".fix");
+        var showFix = mk && mk.status !== "correct" && mk.correct;
+        if (showFix && !fix) { fix = document.createElement("span"); fix.className = "fix"; box.parentNode.appendChild(fix); }
+        if (fix) { fix.textContent = showFix ? "\\u2713 " + mk.correct : ""; fix.style.display = showFix ? "" : "none"; }
+      } else {
+        $$("[data-opt]", box).forEach(function (b) {
+          var L = b.getAttribute("data-opt");
+          b.classList.toggle("on", L === val);
+          b.classList.toggle("right", !!mk && mk.status !== "correct" && mk.correct === L);
+          b.setAttribute("aria-pressed", L === val ? "true" : "false");
+          b.disabled = !canEdit(n);
+        });
+      }
+    });
+    document.body.classList.toggle("review", !!marks);
+    var bar = document.getElementById("reviewbar");
+    if (bar && marks) bar.textContent = "Checked \\u00b7 \\u2713 " + c.correct + " correct \\u00b7 \\u2715 " + c.incorrect + " wrong \\u00b7 \\u25cb " + c.unanswered + " blank";
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-opt]");
+    if (!b) return;
+    var box = b.closest("[data-q]");
+    var n = box.getAttribute("data-q");
+    if (!canEdit(n)) return;
+    var L = b.getAttribute("data-opt");
+    var v = st.answers[n] === L ? null : L;
+    setLocal(n, v);
+    render();
+    send({ mm: "answer", n: Number(n), value: v });
+  });
+  function flushInput(el) {
+    var n = el.getAttribute("data-q");
+    if (!timers[n]) return; // nothing typed since the last send
+    clearTimeout(timers[n]);
+    timers[n] = null;
+    var v = el.value.trim() === "" ? null : el.value;
+    send({ mm: "answer", n: Number(n), value: v });
+  }
+  document.addEventListener("input", function (e) {
+    var el = e.target;
+    if (!el.matches || !el.matches("input[data-q]")) return;
+    var n = el.getAttribute("data-q");
+    if (!canEdit(n)) return;
+    setLocal(n, el.value);
+    clearTimeout(timers[n]);
+    timers[n] = setTimeout(function () { flushInput(el); }, 400);
+  });
+  document.addEventListener("focusin", function (e) {
+    var el = e.target.closest && e.target.closest("[data-q]");
+    if (el) send({ mm: "focus", n: Number(el.getAttribute("data-q")) });
+  });
+  document.addEventListener("focusout", function (e) {
+    var el = e.target;
+    if (el.matches && el.matches("input[data-q]") && canEdit(el.getAttribute("data-q"))) flushInput(el);
+  });
+  window.addEventListener("message", function (e) {
+    if (e.source !== window.parent || !e.data || e.data.mm !== "state" || !e.data.state) return;
+    var s = e.data.state;
+    if (s.mode === "review") marks = s.marks || {};
+    else { marks = null; st.locked = !!s.locked; st.editable = s.editable || null; st.answers = s.answers || {}; }
+    render();
+  });
+  render();
+  send({ mm: "ready" });
+})();`;
 
 const html = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -275,14 +374,47 @@ header h1{font:500 30px/1.1 Newsreader,serif;margin:4px 0 6px}
 .ad{position:relative;margin:0;background:#fff;border:1px solid var(--hair);padding:10px}
 .ad img{display:block;width:100%;height:auto}
 .ad figcaption{position:absolute;top:-10px;left:-10px;width:30px;height:30px;display:grid;place-items:center;background:var(--ink);color:var(--card);font:600 13px "IBM Plex Mono",monospace}
+/* in-booklet marking */
+.ans-in{font:600 15px "IBM Plex Sans",sans-serif;border:0;background:transparent;width:120px;padding:0 4px;color:var(--ink);outline:none}
+.ans-in:focus{background:#fff4d6}
+.gap:has(.ans-in:focus){border-bottom-color:var(--accent)}
+.opt{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:baseline;width:100%;padding:4px 8px;margin:0 -8px;border-radius:3px;cursor:pointer}
+.opt:hover:not(:disabled):not(.on){background:#f1ece0}
+.opt:focus-visible{outline:2px solid var(--accent)}
+.opt b{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border:1.5px solid var(--accent);border-radius:50%;color:var(--accent);font:600 11px "IBM Plex Mono",monospace}
+.opt.on b,.pick button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.opt.on{font-weight:600}
+.opt:disabled,.pick button:disabled{cursor:default}
+.pick{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 0}
+.pick-n{font:600 11px "IBM Plex Mono",monospace;color:var(--muted);margin-right:2px}
+.pick button{font:600 12px "IBM Plex Mono",monospace;min-width:30px;height:30px;padding:0 8px;border:1.5px solid var(--accent);border-radius:15px;background:#fff;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pick button span{font:500 12px "IBM Plex Sans",sans-serif}
+.pick button:hover:not(:disabled):not(.on){background:#fbe9e4}
+.para .pick{margin:0 0 6px;font-family:"IBM Plex Sans",sans-serif}
+.para p{margin:0 0 14px}
+/* review marks (after the test is checked) */
+.ok>.pick-n,.ans-in.ok{color:#1f7a3a}
+.pick.ok button.on,.opts.ok .opt.on b{background:#1f7a3a;border-color:#1f7a3a;color:#fff}
+.pick.bad button.on,.opts.bad .opt.on b{background:var(--accent);border-color:var(--accent);color:#fff}
+.pick button.right,.opts .opt.right b{border-color:#1f7a3a;color:#1f7a3a;box-shadow:0 0 0 3px #cfe9d6}
+.opts.ok .opt.on,.opts .opt.right{color:#1f7a3a}
+.opts.bad .opt.on{color:var(--accent);text-decoration:line-through}
+.ans-in.ok{font-weight:700}.ans-in.bad{color:var(--accent);text-decoration:line-through}
+.gap:has(.ans-in.ok){border-bottom-color:#1f7a3a}.gap:has(.ans-in.bad),.gap:has(.ans-in.miss){border-bottom-color:var(--accent)}
+.fix{font:600 12px "IBM Plex Mono",monospace;color:#1f7a3a;background:#e3f3e7;padding:1px 6px;border-radius:3px;margin-left:4px;white-space:nowrap}
+.mark{font:600 12px "IBM Plex Mono",monospace;margin-left:6px}
+.reviewbar{display:none;position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;font:500 12px "IBM Plex Mono",monospace;padding:8px 12px;margin:-28px -20px 18px;letter-spacing:.04em}
+.review .reviewbar{display:block}
 @media(max-width:600px){.ads{grid-template-columns:1fr}.passage{padding:16px;font-size:16px}}
 </style></head>
 <body><main class="book">
+<div class="reviewbar" id="reviewbar"></div>
 <header><div class="eyebrow">Milliy Mock · Multilevel (CEFR)</div><h1>${esc(title)}</h1>
 <div class="eyebrow">Reading · 5 parts · 35 questions · 60 minutes</div>
-<ul class="rules"><li>Write your answers on the answer sheet next to this booklet.</li><li>Questions 1–6 and 30–33: write ONE word only (spelling counts).</li><li>All other questions: choose a letter.</li></ul></header>
+<ul class="rules"><li>Mark your answers right here in the booklet: click a letter, or type in the gap. They are saved to your answer sheet automatically (and the other way round).</li><li>Questions 1–6 and 30–33: write ONE word only (spelling counts).</li><li>All other questions: choose one letter. Click a chosen letter again to clear it.</li></ul></header>
 ${body.join("\n")}
-</main></body></html>`;
+</main>
+<script>${BRIDGE_JS}</script></body></html>`;
 
 /* ---------------------------------------------------------------- key spec for publish-test.mjs */
 const y1 = [];

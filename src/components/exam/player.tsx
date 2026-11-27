@@ -8,7 +8,8 @@ import { supabase } from "@/lib/supabase/client";
 import { cx, fmtClock, fmtDateTime } from "@/lib/format-utils";
 import type { AnswerValue, Answers } from "@/lib/grading";
 import type { PlayerViewT, QuestionSheetItem } from "@/lib/types";
-import { BookletFrame } from "../booklet-frame";
+import { OPTION_LETTERS } from "@/lib/formats";
+import { BookletFrame, type BookletMessage } from "../booklet-frame";
 import { Alert, Logo, Modal, PageLoader, Spinner } from "../ui";
 import { O1Row, O2Block, Y1Row, Y2Block } from "./inputs";
 
@@ -364,6 +365,41 @@ export function ExamPlayer({ attemptId }: { attemptId: string }) {
   const isLastSection = view ? sectionIdx >= view.format.sections.length - 1 : true;
   const o2Missing = items.filter((s) => s.type === "O2" && !isAnswered(answers[String(s.n)], files[String(s.n)]?.length ?? 0));
 
+  // In-booklet marking: the booklet shows and edits the same Y1/O1 answers as the answer sheet.
+  const bookletState = useMemo(() => {
+    const editable: Record<string, { type: string; options?: number }> = {};
+    const shown: Record<string, string> = {};
+    for (const it of items) {
+      if (it.type !== "Y1" && it.type !== "O1" && it.type !== "O") continue;
+      editable[String(it.n)] = { type: it.type === "Y1" ? "Y1" : "O1", ...(it.type === "Y1" ? { options: it.options } : {}) };
+      const v = answers[String(it.n)];
+      if (typeof v === "string" && v !== "") shown[String(it.n)] = v;
+    }
+    return { mode: "exam", locked, editable, answers: shown };
+  }, [items, answers, locked]);
+
+  const onBookletMessage = useCallback(
+    (m: BookletMessage) => {
+      if (m.mm === "ready") return;
+      const it = items.find((s) => s.n === m.n);
+      if (!it) return;
+      if (m.mm === "focus") {
+        setCurrent(m.n);
+        return;
+      }
+      if (locked) return;
+      if (it.type === "Y1") {
+        if (m.value !== null && !OPTION_LETTERS.slice(0, it.options ?? 4).includes(m.value)) return;
+        onChange(m.n, m.value);
+      } else if (it.type === "O1" || it.type === "O") {
+        const v = m.value?.slice(0, 100) ?? null;
+        onChange(m.n, v === null || v.trim() === "" ? null : v);
+      }
+      setCurrent(m.n);
+    },
+    [items, locked, onChange],
+  );
+
   const toggleFlag = (n: number) => {
     setFlags((f) => {
       const next = f.includes(n) ? f.filter((x) => x !== n) : [...f, n];
@@ -672,7 +708,7 @@ export function ExamPlayer({ attemptId }: { attemptId: string }) {
           </div>
           <div className="relative min-h-0 flex-1 bg-white">
             {bookletUrl ? (
-              <BookletFrame key={bookletNonce} url={bookletUrl} title="Test kitobchasi" zoom={zoom} />
+              <BookletFrame key={bookletNonce} url={bookletUrl} title="Test kitobchasi" zoom={zoom} bridge={{ state: bookletState, onMessage: onBookletMessage }} />
             ) : (
               <div className="p-6">
                 <Alert tone="warn">Kitobcha manzili olinmadi. ↻ tugmasi bilan qayta urinib ko‘ring.</Alert>

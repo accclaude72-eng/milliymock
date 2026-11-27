@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { BookletFrame } from "@/components/booklet-frame";
 import { StackBar, TopicBars } from "@/components/charts";
 import { RequireCandidate } from "@/components/guards";
 import { Alert, PageLoader } from "@/components/ui";
@@ -50,6 +51,7 @@ interface Result {
     status: "pending_review" | "graded" | "not_reviewed";
   }[];
   revealAnswers: boolean;
+  bookletUrl: string | null;
   o2Total: number | null;
   o2Max: number;
 }
@@ -110,6 +112,19 @@ function ResultView() {
         .sort((a, b) => a.value - b.value),
     [r],
   );
+
+  const reviewState = useMemo(() => {
+    const marks: Record<string, { status: string; answer: string | null; correct: string | null }> = {};
+    for (const q of r?.questions ?? []) {
+      if (q.type !== "Y1" && q.type !== "O1" && q.type !== "O") continue;
+      marks[String(q.n)] = {
+        status: q.status,
+        answer: typeof q.answer === "string" ? q.answer : null,
+        correct: q.correct == null ? null : Array.isArray(q.correct) ? q.correct.join(" / ") : q.correct,
+      };
+    }
+    return { mode: "review", marks };
+  }, [r]);
 
   if (err)
     return (
@@ -386,6 +401,20 @@ function ResultView() {
                 </details>
               </article>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* review inside the booklet */}
+      {r.bookletUrl && (
+        <section className="mt-10 no-print">
+          <h2 className="display text-3xl">Kitobchada tekshirish</h2>
+          <p className="mt-1 text-sm text-ink-2">
+            Javoblaringiz kitobchaning o‘zida ko‘rsatiladi: <span className="font-semibold text-ok">yashil</span> — to‘g‘ri,{" "}
+            <span className="font-semibold text-accent">qizil</span> — noto‘g‘ri{r.revealAnswers ? ", to‘g‘ri javob yonida ko‘rsatiladi" : ""}. Bu imkoniyat kitobcha qo‘llab-quvvatlasa ishlaydi.
+          </p>
+          <div className="sheet mt-4 h-[78vh] overflow-hidden">
+            <BookletFrame url={r.bookletUrl} title="Tekshirilgan test kitobchasi" bridge={{ state: reviewState }} />
           </div>
         </section>
       )}
