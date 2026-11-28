@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/server/admin-session";
 import { pingAgent } from "@/lib/server/agent";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
 import { rateLimit } from "@/lib/server/repo";
-import { notifyTelegram } from "@/lib/server/telegram";
+import { sendTelegram, telegramToken } from "@/lib/server/telegram";
 
 export const maxDuration = 90;
 
@@ -22,15 +22,15 @@ export const POST = route(async (req) => {
   if (!(await rateLimit(`agent:check:${what}`, 5, 60_000))) throw new ApiError(429, "rate_limited", "Juda ko‘p tekshiruv. Bir daqiqadan so‘ng urinib ko‘ring.");
   if (what === "agent") return ok({ reply: await pingAgent() });
   if (what === "telegram") {
-    const sent = await notifyTelegram("✅ Milliy Mock: Telegram ulanishi ishlayapti. Agent hisobotlari shu yerga keladi.");
-    if (!sent) throw new ApiError(502, "telegram_failed", "Telegramga yuborilmadi. TELEGRAM_BOT_TOKEN va TELEGRAM_CHAT_ID ni tekshiring (botga avval /start yozing).");
-    return ok({ sent });
+    const r = await sendTelegram("✅ Milliy Mock: Telegram ulanishi ishlayapti. Agent hisobotlari shu yerga keladi.");
+    if (!r.ok) throw new ApiError(502, "telegram_failed", `Telegramga yuborilmadi. ${r.error}`);
+    return ok({ sent: true });
   }
-  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const token = telegramToken();
   if (!token) throw new ApiError(503, "telegram_not_configured", "Avval TELEGRAM_BOT_TOKEN ni qo‘shing.");
   const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates?limit=50`, { signal: AbortSignal.timeout(10_000) }).catch(() => null);
   const j = (await res?.json().catch(() => null)) as { ok?: boolean; result?: { message?: { chat?: { id: number; first_name?: string; username?: string; title?: string } } }[] } | null;
-  if (!j?.ok) throw new ApiError(502, "telegram_failed", "Bot tokeni noto‘g‘ri yoki Telegram javob bermadi.");
+  if (!j?.ok) throw new ApiError(502, "telegram_failed", res?.status === 401 ? "Bot tokeni noto‘g‘ri (TELEGRAM_BOT_TOKEN). BotFather bergan tokenni to‘liq, bo‘sh joysiz qayta kiriting." : "Telegram javob bermadi.");
   const chats = new Map<number, string>();
   for (const u of j.result ?? []) {
     const c = u.message?.chat;

@@ -83,11 +83,14 @@ export default function MaterialsAdmin() {
         <div>
           <p className="eyebrow">Test materiallari</p>
           <h1 className="display mt-1 text-5xl">Materiallar</h1>
-          <p className="mt-2 text-sm text-muted">Barcha fayllar Firebase Storage’da, ma’lumotlar Firestore’da saqlanadi.</p>
+          <p className="mt-2 text-sm text-muted">Kitobchalar yopiq Supabase Storage’da, kalitlar faqat serverda saqlanadi.</p>
         </div>
-        <Link href="/admin/materiallar/yangi" className="btn btn-primary">
-          ＋ HTML test yuklash
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <BankSync />
+          <Link href="/admin/materiallar/yangi" className="btn btn-primary">
+            ＋ HTML test yuklash
+          </Link>
+        </div>
       </div>
       {err && (
         <Alert tone="error" className="mt-4">
@@ -227,5 +230,31 @@ export default function MaterialsAdmin() {
         </p>
       </Modal>
     </div>
+  );
+}
+
+/** Rebuilds the question bank (mistake notebook, practice) from all published booklets. */
+function BankSync() {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await adminApi<{ materials: number; questions: number }>("/api/admin/question-bank", { method: "POST" });
+      setMsg(`✓ ${r.materials} ta testdan ${r.questions} ta savol`);
+    } catch (e) {
+      setMsg(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="flex items-center gap-2">
+      {msg && <span className="text-xs text-muted">{msg}</span>}
+      <button type="button" className="btn" disabled={busy} onClick={run} title="E’lon qilingan kitobchalardan savollar bazasini qayta tuzadi">
+        {busy && <Spinner />} ↻ Savollar bazasi
+      </button>
+    </span>
   );
 }

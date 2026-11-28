@@ -1,5 +1,6 @@
 "use client";
 
+import { CabinetNav } from "@/components/cabinet-nav";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -92,6 +93,7 @@ function ProfileForm({ user, profile, next }: { user: User; profile: Profile | n
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+      <CabinetNav />
       <p className="eyebrow">{creating ? "So‘nggi qadam" : "Shaxsiy kabinet"}</p>
       <h1 className="display mt-2 text-5xl">{creating ? "Profilni to‘ldiring" : "Profil"}</h1>
       {creating && <p className="mt-3 text-ink-2">Candidate ID profil saqlangach avtomatik beriladi.</p>}

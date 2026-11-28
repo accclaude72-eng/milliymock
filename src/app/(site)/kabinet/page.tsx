@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { ProgressLine, TopicBars } from "@/components/charts";
+import { CabinetNav } from "@/components/cabinet-nav";
 import { RequireCandidate } from "@/components/guards";
 import { useSubjects } from "@/components/landing/subjects-grid";
 import { Alert, EmptyState, ProgressBar, Stat } from "@/components/ui";
@@ -97,6 +98,7 @@ function Dashboard({ profile }: { profile: Profile }) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <CabinetNav />
       {/* header */}
       <div className="flex flex-wrap items-end justify-between gap-6 border-b-[1.5px] border-ink pb-8">
         <div>

@@ -11,19 +11,22 @@ const NAV = [
   { href: "/intro", label: "Tanishuv ✦" },
   { href: "/imtihonlar", label: "Imtihonlar" },
   { href: "/fanlar", label: "Fanlar" },
+  { href: "/challenge", label: "Challenge ⚡" },
+  { href: "/battle", label: "Battle ⚔" },
+  { href: "/reyting", label: "Reyting" },
   { href: "/#jarayon", label: "Qanday ishlaydi" },
   { href: "/#savollar", label: "Savollar" },
 ];
 
 function DesktopNav({ pathname }: { pathname: string | null }) {
   return (
-    <nav aria-label="Asosiy menyu" className="hidden flex-1 items-center gap-1 lg:flex">
+    <nav aria-label="Asosiy menyu" className="hidden flex-1 items-center gap-1 xl:flex">
       {NAV.map((n) => (
         <Link
           key={n.href}
           href={n.href}
           className={cx(
-            "rounded-[2px] px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:bg-paper-2 hover:text-ink",
+            "whitespace-nowrap rounded-[2px] px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:bg-paper-2 hover:text-ink",
             pathname === n.href && "bg-paper-2 text-ink",
           )}
         >
@@ -66,7 +69,7 @@ export function SiteHeader() {
         <Suspense fallback={<DesktopNav pathname={null} />}>
           <DesktopNavWithPath />
         </Suspense>
-        <div className="ml-auto hidden items-center gap-2 lg:flex">
+        <div className="ml-auto hidden items-center gap-2 xl:flex">
           {loading ? (
             <span className="skeleton h-9 w-40" />
           ) : authed ? (
@@ -92,7 +95,7 @@ export function SiteHeader() {
         </div>
         <button
           type="button"
-          className="btn btn-sm ml-auto lg:hidden"
+          className="btn btn-sm ml-auto xl:hidden"
           aria-expanded={open}
           aria-controls="mobile-nav"
           onClick={() => setOpen((v) => !v)}
@@ -103,7 +106,7 @@ export function SiteHeader() {
       {open && (
         <div
           id="mobile-nav"
-          className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto border-t-[1.5px] border-ink bg-paper animate-fade lg:hidden"
+          className="fixed inset-x-0 top-16 bottom-0 z-40 overflow-y-auto border-t-[1.5px] border-ink bg-paper animate-fade xl:hidden"
           onClick={(e) => {
             // Close the menu after any link/button inside it is activated.
             if ((e.target as HTMLElement).closest("a,button")) setOpen(false);

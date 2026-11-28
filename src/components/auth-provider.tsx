@@ -61,6 +61,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadedUid = useRef<string | null>(null);
+  // The profile request in flight. Supabase often fires two auth events on page load
+  // (INITIAL_SESSION + SIGNED_IN / TOKEN_REFRESHED); the second must wait for the same
+  // request instead of finishing "loading" early with no profile (which redirected
+  // signed-in candidates to the profile form).
+  const pending = useRef<Promise<unknown> | null>(null);
 
   useEffect(() => {
     if (!clientConfigured) return;
@@ -74,19 +79,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Only refetch the profile on sign-in / account switch, not on token refresh.
           if (loadedUid.current !== u.uid) {
             loadedUid.current = u.uid;
-            const p = await loadProfile();
-            // First login after e-mail confirmation: create the profile from the registration data.
-            if (!p && u.pendingProfile?.firstName && u.pendingProfile?.lastName) {
-              try {
-                const r = await api<{ profile: Profile }>("/api/me", { method: "POST", body: u.pendingProfile });
-                setProfile(r.profile);
-              } catch {
-                /* fall back to the profile form */
+            pending.current = (async () => {
+              const p = await loadProfile();
+              // First login after e-mail confirmation: create the profile from the registration data.
+              if (!p && u.pendingProfile?.firstName && u.pendingProfile?.lastName) {
+                try {
+                  const r = await api<{ profile: Profile }>("/api/me", { method: "POST", body: u.pendingProfile });
+                  setProfile(r.profile);
+                } catch {
+                  /* fall back to the profile form */
+                }
               }
-            }
+            })();
           }
+          await pending.current;
         } else {
           loadedUid.current = null;
+          pending.current = null;
           setProfile(null);
         }
         setLoading(false);
