@@ -34,6 +34,8 @@ export function CabinetNav() {
           <Link
             key={i.href}
             href={i.href}
+            // 16 tabs on every cabinet page: prefetching all of them would compete with the page's own data requests.
+            prefetch={false}
             aria-current={on ? "page" : undefined}
             className={cx(
               "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",

@@ -2,7 +2,7 @@
  * Site-wide design themes. The admin picks one in /admin/dizayn; it is applied as
  * <html data-theme="…"> and styled in src/app/themes.css. "default" is the original paper design.
  */
-export const THEME_IDS = ["default", "aurora", "samarqand", "minimal", "terminal", "konfet"] as const;
+export const THEME_IDS = ["default", "aurora", "samarqand", "minimal", "terminal", "konfet", "okean", "brutal", "sahro", "kiber", "bahor"] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 export interface ThemeInfo {
@@ -78,6 +78,56 @@ export const THEMES: ThemeInfo[] = [
     swatch: ["#fff4f0", "#ffffff", "#3b1d4a", "#ff4f8b", "#7c5cff"],
     themeColor: "#fff4f0",
     fonts: "Baloo 2 · Nunito",
+  },
+  {
+    id: "okean",
+    name: "Okean",
+    tagline: "Chuqur dengiz va to‘lqinlar",
+    description: "To‘q moviy chuqurlik, pastda harakatlanuvchi to‘lqinlar, ko‘tarilayotgan pufakchalar va akvamarin urg‘u.",
+    dark: true,
+    swatch: ["#04223a", "#0a3352", "#e6f7ff", "#2ee6c5", "#4aa8ff"],
+    themeColor: "#04223a",
+    fonts: "Outfit · JetBrains Mono",
+  },
+  {
+    id: "brutal",
+    name: "Brutal",
+    tagline: "Neo-brutalizm: qalin va jasur",
+    description: "Sariq fon, qalin qora chiziqlar, qattiq soyalar, yorqin rang bloklari va bosilganda “cho‘kadigan” tugmalar.",
+    dark: false,
+    swatch: ["#ffe94d", "#ffffff", "#000000", "#ff4ecd", "#2f6bff"],
+    themeColor: "#ffe94d",
+    fonts: "Space Grotesk",
+  },
+  {
+    id: "sahro",
+    name: "Sahro",
+    tagline: "Buxoro qumi va terrakota",
+    description: "Iliq qum ranglari, terrakota va oxra urg‘ular, gumbaz–ravoq naqshlari va nafis Fraunces serif harflar.",
+    dark: false,
+    swatch: ["#f4e7d3", "#fbf4ea", "#3b2518", "#c2562b", "#d99a2b"],
+    themeColor: "#f4e7d3",
+    fonts: "Fraunces · Outfit",
+  },
+  {
+    id: "kiber",
+    name: "Kiber",
+    tagline: "Kiberpank: neon pushti va sariq",
+    description: "Qora fon, neon pushti va sariq, qiya kesilgan tugmalar, “glitch” sarlavhalar va skaner chizig‘i.",
+    dark: true,
+    swatch: ["#0a0710", "#14101f", "#f5f3ff", "#ff2bd6", "#f9f002"],
+    themeColor: "#0a0710",
+    fonts: "Space Grotesk · JetBrains Mono",
+  },
+  {
+    id: "bahor",
+    name: "Bahor",
+    tagline: "Yashil bog‘ va gul barglari",
+    description: "Yalpiz–yashil ranglar, barg naqshi, sekin uchib tushayotgan gul barglari va nafis DM Serif sarlavhalar.",
+    dark: false,
+    swatch: ["#effaf3", "#ffffff", "#123524", "#1f9d61", "#ff8fab"],
+    themeColor: "#effaf3",
+    fonts: "DM Serif Display · Outfit",
   },
 ];
 

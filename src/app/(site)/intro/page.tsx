@@ -46,6 +46,10 @@ const SPARKS = Array.from({ length: 18 }, (_, i) => ({
 export default function IntroPage() {
   return (
     <div className="overflow-x-clip">
+      {/* Opening the site lands here first (once per session) — the way on is always one tap away. */}
+      <Link href="/" className="btn btn-sm fixed bottom-4 right-4 z-30 shadow-hard-sm no-print sm:bottom-6 sm:right-6">
+        Saytga o‘tish →
+      </Link>
       {/* ════════════════════════════════ HERO */}
       <section className="relative isolate flex min-h-[calc(100dvh-4rem)] items-center overflow-hidden border-b-[1.5px] border-ink">
         <Parallax className="pointer-events-none absolute inset-0 -z-10">

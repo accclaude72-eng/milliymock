@@ -1,0 +1,221 @@
+/* Student dashboard motion. Everything decorative stops under prefers-reduced-motion. */
+
+@keyframes dash-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.dash-float {
+  animation: dash-float 5s ease-in-out infinite;
+}
+
+@keyframes dash-twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+.dash-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dash-twinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes dash-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.18;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.3;
+  }
+}
+.dash-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dash-pulse 6s ease-in-out infinite;
+}
+
+@keyframes dash-type {
+  0% {
+    transform: scaleX(0.15);
+  }
+  60%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+.dash-type {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: dash-type 2.8s ease-in-out infinite alternate;
+}
+
+@keyframes dash-steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  40% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+.dash-steam {
+  animation: dash-steam 2.6s ease-out infinite;
+}
+
+@keyframes dash-sway {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+.dash-sway {
+  animation: dash-sway 4.5s ease-in-out infinite;
+}
+
+@keyframes dash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.dash-spin {
+  animation: dash-spin 24s linear infinite;
+}
+
+@keyframes dash-flicker {
+  0%,
+  100% {
+    transform: scale(1, 1) skewX(0deg);
+  }
+  25% {
+    transform: scale(0.96, 1.06) skewX(-3deg);
+  }
+  50% {
+    transform: scale(1.03, 0.97) skewX(2deg);
+  }
+  75% {
+    transform: scale(0.98, 1.04) skewX(-1deg);
+  }
+}
+.dash-flicker {
+  animation: dash-flicker 1.4s ease-in-out infinite;
+}
+
+/* cards slide in one after another */
+@keyframes dash-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dash-in {
+  animation: dash-in 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+/* week dots pop */
+@keyframes dash-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.dash-pop {
+  animation: dash-pop 0.45s ease-out both;
+  animation-delay: calc(300ms + var(--i, 0) * 60ms);
+}
+
+/* animated progress ring (stroke drawn from 0) */
+.dash-ring {
+  transition: stroke-dashoffset 1.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* hero shine sweep */
+.dash-hero {
+  position: relative;
+  overflow: hidden;
+}
+.dash-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, color-mix(in srgb, var(--color-card) 55%, transparent) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: dash-shine 7s ease-in-out 1.2s infinite;
+}
+@keyframes dash-shine {
+  0%,
+  70% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.dash-tile:hover .dash-tile-icon {
+  animation: dash-wiggle 0.6s ease-in-out;
+}
+@keyframes dash-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  30% {
+    transform: rotate(-12deg) scale(1.08);
+  }
+  60% {
+    transform: rotate(9deg) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-float,
+  .dash-twinkle,
+  .dash-pulse,
+  .dash-type,
+  .dash-steam,
+  .dash-sway,
+  .dash-spin,
+  .dash-flicker,
+  .dash-in,
+  .dash-pop,
+  .dash-hero::after,
+  .dash-tile:hover .dash-tile-icon {
+    animation: none !important;
+  }
+  .dash-ring {
+    transition: none;
+  }
+}

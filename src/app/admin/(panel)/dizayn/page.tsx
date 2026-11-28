@@ -21,6 +21,11 @@ const MOCK: Record<ThemeId, { font: string; head: string; radius: number; btnRad
   minimal: { font: "var(--font-manrope)", head: "var(--font-manrope)", radius: 16, btnRadius: 10, card: "0" },
   terminal: { font: "var(--font-jet)", head: "var(--font-jet)", radius: 0, btnRadius: 0, card: "1px dashed #39ff14" },
   konfet: { font: "var(--font-nunito)", head: "var(--font-baloo)", radius: 20, btnRadius: 999, card: "2px solid #fbe2e8", extra: { boxShadow: "0 10px 24px -12px rgba(255,79,139,.5)" } },
+  okean: { font: "var(--font-outfit)", head: "var(--font-outfit)", radius: 18, btnRadius: 999, card: "1px solid rgba(46,230,197,.35)", extra: { boxShadow: "0 12px 30px -12px rgba(46,230,197,.55)" } },
+  brutal: { font: "var(--font-grotesk)", head: "var(--font-grotesk)", radius: 6, btnRadius: 6, card: "3px solid #000", extra: { boxShadow: "5px 5px 0 #000" } },
+  sahro: { font: "var(--font-outfit)", head: "var(--font-fraunces)", radius: 4, btnRadius: 999, card: "1px solid #d9b98f", extra: { boxShadow: "0 10px 24px -14px rgba(194,86,43,.5)" } },
+  kiber: { font: "var(--font-grotesk)", head: "var(--font-grotesk)", radius: 0, btnRadius: 0, card: "1px solid #ff2bd6", extra: { boxShadow: "4px 4px 0 #f9f002" } },
+  bahor: { font: "var(--font-outfit)", head: "var(--font-dmserif)", radius: 22, btnRadius: 999, card: "1px solid #cdebd8", extra: { boxShadow: "0 12px 28px -16px rgba(31,157,97,.45)" } },
 };
 
 function Mock({ t }: { t: ThemeInfo }) {
@@ -35,14 +40,24 @@ function Mock({ t }: { t: ThemeInfo }) {
           ? "repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px)"
           : t.id === "samarqand"
             ? "radial-gradient(circle at 50% -20%, #3fb6c655, transparent 60%)"
-            : t.id === "default"
+            : t.id === "okean"
+              ? `radial-gradient(circle at 20% 0%, ${second}55, transparent 55%), linear-gradient(180deg, transparent 70%, ${accent}33)`
+              : t.id === "brutal"
+                ? "radial-gradient(#0000001a 1.2px, transparent 1.4px)"
+                : t.id === "sahro"
+                  ? `radial-gradient(circle at 80% -10%, ${second}55, transparent 55%)`
+                  : t.id === "kiber"
+                    ? `linear-gradient(120deg, ${accent}33, transparent 45%), repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 4px)`
+                    : t.id === "bahor"
+                      ? `radial-gradient(circle at 0% 0%, #c9f0d8, transparent 60%), radial-gradient(circle at 100% 100%, ${second}44, transparent 55%)`
+                      : t.id === "default"
               ? "linear-gradient(rgba(20,20,18,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(20,20,18,.06) 1px, transparent 1px)"
               : undefined;
   return (
     <div
       aria-hidden
       className="relative h-44 overflow-hidden"
-      style={{ background: bg, backgroundImage: bgImage, backgroundSize: t.id === "default" ? "14px 14px" : undefined, color: text, fontFamily: m.font }}
+      style={{ background: bg, backgroundImage: bgImage, backgroundSize: t.id === "default" ? "14px 14px" : t.id === "brutal" ? "12px 12px" : undefined, color: text, fontFamily: m.font }}
     >
       <div className="flex items-center justify-between px-3 py-2 text-[0.6rem]" style={{ borderBottom: t.id === "minimal" ? "1px solid #e6e8ee" : `1px solid ${t.dark ? "rgba(255,255,255,.14)" : text + "33"}` }}>
         <b style={{ fontFamily: m.head }}>Milliy Mock</b>

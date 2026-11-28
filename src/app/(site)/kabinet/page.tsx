@@ -100,25 +100,8 @@ function Dashboard({ profile }: { profile: Profile }) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <CabinetNav />
-      {/* header */}
-      <div className="flex flex-wrap items-end justify-between gap-6 border-b-[1.5px] border-ink pb-8">
-        <div>
-          <p className="eyebrow">Shaxsiy kabinet</p>
-          <h1 className="display mt-2 text-5xl sm:text-6xl">
-            Assalomu alaykum, <em>{profile.firstName}</em>
-          </h1>
-          <p className="mt-3 flex flex-wrap items-center gap-3 text-sm text-ink-2">
-            <span className="chip chip-ink num !text-[0.75rem] !tracking-[0.12em]">{profile.candidateId}</span>
-            {profile.region && <span>{profile.region}</span>}
-            <Link href="/kabinet/profil" className="link">
-              Profilni tahrirlash
-            </Link>
-          </p>
-        </div>
-        <Link href="/imtihonlar" className="btn btn-primary !min-h-12 !px-6 !text-base">
-          Mock imtihonni boshlash →
-        </Link>
-      </div>
+      {/* animated hero + today (greeting, level, streak, activity, tasks) */}
+      <TodayPanel firstName={profile.firstName} candidateId={profile.candidateId} />
 
       {user && !user.emailVerified && (
         <Alert tone="warn" className="mt-6" title="Email manzilingizni tasdiqlang">
@@ -147,8 +130,6 @@ function Dashboard({ profile }: { profile: Profile }) {
           {err}
         </Alert>
       )}
-
-      <TodayPanel />
 
       {/* stats */}
       <h2 className="display mt-12 text-3xl">Mock natijalari</h2>
