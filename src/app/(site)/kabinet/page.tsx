@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth-provider";
 import { ProgressLine, TopicBars } from "@/components/charts";
 import { CabinetNav } from "@/components/cabinet-nav";
 import { RequireCandidate } from "@/components/guards";
+import { TodayPanel } from "@/components/today-panel";
 import { useSubjects } from "@/components/landing/subjects-grid";
 import { Alert, EmptyState, ProgressBar, Stat } from "@/components/ui";
 import { api, errorText } from "@/lib/api";
@@ -147,8 +148,11 @@ function Dashboard({ profile }: { profile: Profile }) {
         </Alert>
       )}
 
+      <TodayPanel />
+
       {/* stats */}
-      <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <h2 className="display mt-12 text-3xl">Mock natijalari</h2>
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Yakunlangan mock" value={attempts ? finished.length : "…"} />
         <Stat label="Oxirgi xom natija" value={latest?.summary ? `${fmtNum(latest.summary.percent)}%` : "—"} hint={latest ? `${latest.subjectName} · ${fmtDate(latest.createdAt)}` : "Hali natija yo‘q"} tone="accent" />
         <Stat label="O‘rtacha xom natija" value={avg !== null ? `${fmtNum(avg)}%` : "—"} hint={finished.length ? `${finished.length} ta urinish asosida` : undefined} />

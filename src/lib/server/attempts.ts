@@ -8,6 +8,7 @@ import type { Attempt, AttemptStatus, FileMeta, Material, MaterialKeyDoc, Player
 import { ApiError } from "./http";
 import { attemptsOf, getKey, getMaterial } from "./repo";
 import { T, getDoc, insertDoc, newId, updateIfRev } from "./supabase";
+import { notifyResultPublished } from "./notifications";
 
 export const CLIENT_STALE_MS = 25_000;
 export const MAX_O2_FILES = 5;
@@ -149,6 +150,8 @@ export async function withAttempt(
     result = { ...reconciled, ...full };
     return Object.keys(full).length ? full : null;
   });
+  // Auto-published right now (no written part) → tell the student on Telegram (deduplicated).
+  if (saved.status === "published" && saved.publishedAt && Date.now() - saved.publishedAt < 60_000) await notifyResultPublished(saved);
   // When nothing was written, return the reconciled in-memory view (e.g. fresh deadline).
   return saved.rev !== (result as Attempt | null)?.rev ? saved : (result ?? saved);
 }

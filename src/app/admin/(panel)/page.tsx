@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AdminOverview } from "@/components/admin/overview";
 import { Alert, PageLoader, Stat } from "@/components/ui";
 import { adminApi } from "@/lib/admin-api";
 import { errorText } from "@/lib/api";
@@ -37,7 +38,11 @@ export default function AdminHome() {
       <h1 className="display mt-1 text-5xl">Umumiy holat</h1>
       <p className="mt-2 text-sm text-muted">Barcha raqamlar ma’lumotlar bazasidan jonli hisoblanadi.</p>
 
-      <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <AdminOverview />
+
+      <h2 className="display mt-10 text-2xl">Foydalanuvchilar va mock imtihonlar</h2>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Ro‘yxatdan o‘tganlar" value={s.users} hint={`+${s.newUsers7d} so‘nggi 7 kunda`} />
         <Stat label="Faol (24 soat)" value={s.activeUsers24h} />
         <Stat label="Urinishlar" value={s.attempts} />

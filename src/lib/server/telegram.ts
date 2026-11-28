@@ -39,10 +39,16 @@ export interface TelegramResult {
 
 /** Sends and reports why it failed. `html` may contain <b>/<i>/<code> from our own templates; pass untrusted text through `plain`. */
 export async function sendTelegram(html: string): Promise<TelegramResult> {
-  const token = botToken();
   const chat = chatId();
-  if (!token || !chat) return { ok: false, error: "TELEGRAM_BOT_TOKEN yoki TELEGRAM_CHAT_ID sozlanmagan." };
+  if (!botToken() || !chat) return { ok: false, error: "TELEGRAM_BOT_TOKEN yoki TELEGRAM_CHAT_ID sozlanmagan." };
   if (!/^-?\d{5,20}$/.test(chat)) return { ok: false, error: `TELEGRAM_CHAT_ID faqat raqamdan iborat bo‘lishi kerak (hozir: “${chat.slice(0, 20)}”).` };
+  return sendTelegramTo(chat, html);
+}
+
+/** Sends to any chat (e.g. a student who linked the bot). Never throws. */
+export async function sendTelegramTo(chat: string | number, html: string, buttons?: { text: string; url: string }[]): Promise<TelegramResult> {
+  const token = botToken();
+  if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN sozlanmagan." };
   // Telegram limit is 4096 chars per message.
   const chunks: string[] = [];
   for (let i = 0; i < html.length; i += 3900) chunks.push(html.slice(i, i + 3900));
@@ -51,7 +57,13 @@ export async function sendTelegram(html: string): Promise<TelegramResult> {
       const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chat, text, parse_mode: chunks.length > 1 ? undefined : "HTML", disable_web_page_preview: true }),
+        body: JSON.stringify({
+          chat_id: chat,
+          text,
+          parse_mode: chunks.length > 1 ? undefined : "HTML",
+          disable_web_page_preview: true,
+          ...(buttons?.length ? { reply_markup: { inline_keyboard: buttons.map((b) => [{ text: b.text, url: b.url }]) } } : {}),
+        }),
         signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) {
@@ -76,4 +88,34 @@ export async function notifyTelegram(html: string): Promise<boolean> {
 /** Escapes text that came from users or from the agent before putting it in an HTML message. */
 export function plain(s: string): string {
   return esc(s);
+}
+
+/** Secret Telegram sends in the X-Telegram-Bot-Api-Secret-Token header of every webhook call. */
+export const webhookSecret = () => clean(process.env.TELEGRAM_WEBHOOK_SECRET);
+
+/** Calls a Bot API method (server only). Never throws. */
+export async function botApi<T = unknown>(method: string, body: Record<string, unknown> = {}): Promise<{ ok: boolean; result?: T; description?: string }> {
+  const token = botToken();
+  if (!token) return { ok: false, description: "TELEGRAM_BOT_TOKEN sozlanmagan." };
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    });
+    return (await res.json()) as { ok: boolean; result?: T; description?: string };
+  } catch {
+    return { ok: false, description: "Telegram serveriga ulanib bo‘lmadi." };
+  }
+}
+
+let usernameCache: string | null = null;
+/** The bot's @username (for t.me deep links). */
+export async function botUsername(): Promise<string | null> {
+  if (usernameCache) return usernameCache;
+  const env = clean(process.env.TELEGRAM_BOT_USERNAME).replace(/^@/, "");
+  if (env) return (usernameCache = env);
+  const r = await botApi<{ username?: string }>("getMe");
+  return (usernameCache = r.ok ? (r.result?.username ?? null) : null);
 }

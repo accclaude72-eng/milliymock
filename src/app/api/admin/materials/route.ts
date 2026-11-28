@@ -48,6 +48,8 @@ export const GET = route(async () => {
 const Create = MaterialCreateSchema.extend({
   subjectCode: z.string().regex(/^[a-z0-9-]{1,40}$/),
   html: HtmlUploadSchema,
+  /** Optional: another format version of the same subject (default: the subject's active format). */
+  formatId: z.string().regex(/^[a-z0-9-]{1,60}$/).optional(),
 });
 
 /** Creates a DRAFT material from an HTML booklet already uploaded to Storage. */
@@ -56,7 +58,8 @@ export const POST = route(async (req) => {
   await requireAdmin();
   const body = Create.parse(await readJson(req));
   const subject = await getSubject(body.subjectCode);
-  const base = await getFormat(subject.activeFormatId);
+  const base = await getFormat(body.formatId ?? subject.activeFormatId);
+  if (base.subjectCode !== subject.code) throw new ApiError(400, "bad_format", "Bu format boshqa fanga tegishli.");
   let format = base;
   let range: { from: number; to: number } | null = null;
   let timed = true; // Full mock = official timing, always.

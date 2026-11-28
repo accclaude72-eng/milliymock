@@ -10,12 +10,16 @@ const ITEMS = [
   { href: "/kabinet/xatolar", label: "Xatolar daftari", icon: "✎" },
   { href: "/kabinet/mashq", label: "Mashq", icon: "◎" },
   { href: "/kabinet/reja", label: "O‘quv reja", icon: "▦" },
+  { href: "/kartalar", label: "Flashcards", icon: "❏" },
+  { href: "/videolar", label: "Video darslar", icon: "►" },
   { href: "/challenge", label: "Challenge", icon: "⚡" },
   { href: "/reyting", label: "Reyting", icon: "🏆" },
   { href: "/battle", label: "Battle", icon: "⚔" },
   { href: "/dostlar", label: "Do‘stlar", icon: "☺" },
   { href: "/xonalar", label: "Xonalar", icon: "▣" },
   { href: "/imtihonlar", label: "Mock imtihonlar", icon: "▶" },
+  { href: "/kabinet/sertifikatlar", label: "Sertifikatlar", icon: "🎓" },
+  { href: "/kabinet/bildirishnomalar", label: "Bildirishnomalar", icon: "🔔" },
   { href: "/kabinet/profil", label: "Sozlamalar", icon: "⚙" },
 ];
 

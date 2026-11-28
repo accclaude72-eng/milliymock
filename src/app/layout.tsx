@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, IBM_Plex_Mono, IBM_Plex_Sans, JetBrains_Mono, Manrope, Newsreader, Nunito, Playfair_Display, Sora } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
+import { OfflineBanner, PwaRegister } from "@/components/pwa";
 import { getSiteTheme } from "@/lib/server/site-settings";
 import { THEME_IDS, THEME_PREVIEW_KEY, themeInfo } from "@/lib/themes";
 import "./globals.css";
@@ -23,6 +24,8 @@ export const metadata: Metadata = {
   description:
     "Biologiya, kimyo, matematika va fizika bo‘yicha Milliy sertifikat formatidagi mock-imtihonlar: Y1, Y2, O1 va O2 topshiriqlari, server vaqti, natijalar tahlili va yozma ishlarni ekspert baholashi.",
   applicationName: "Milliy Mock",
+  appleWebApp: { capable: true, title: "Milliy Mock", statusBarStyle: "default" },
+  icons: { apple: "/pwa-icon/apple-180" },
 };
 
 export async function generateViewport(): Promise<Viewport> {
@@ -43,6 +46,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <a href="#asosiy" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 btn btn-ink">
           Asosiy mazmunga o‘tish
         </a>
+        <PwaRegister />
+        <OfflineBanner />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

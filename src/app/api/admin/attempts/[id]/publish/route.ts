@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { requireAdmin } from "@/lib/server/admin-session";
 import { updateAttempt } from "@/lib/server/attempts";
+import { revokeForAttempt } from "@/lib/server/certificates";
+import { notifyResultPublished } from "@/lib/server/notifications";
 import { ApiError, assertSameOrigin, ok, readJson, route } from "@/lib/server/http";
 import { audit } from "@/lib/server/repo";
 
@@ -23,5 +25,8 @@ export const POST = route<{ params: Promise<{ id: string }> }>(async (req, { par
     return { status: "graded", publishedAt: null, statusHistory: [...a.statusHistory, { status: "graded", at: now }] };
   });
   await audit(`result.${action}`, `attempts/${id}`, { status: a.status });
+  if (action === "publish" && a.status === "published") await notifyResultPublished(a);
+  // A result taken back for recheck can no longer back a certificate.
+  if (action === "unpublish") await revokeForAttempt(id, "Natija qayta tekshiruvga olindi");
   return ok({ status: a.status });
 });

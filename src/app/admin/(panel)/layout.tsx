@@ -20,6 +20,10 @@ const NAV = [
   { href: "/admin/agent", label: "AI agent", code: "09" },
   { href: "/admin/challenge", label: "Challenge va reyting", code: "10" },
   { href: "/admin/ijtimoiy", label: "Battle va xonalar", code: "11" },
+  { href: "/admin/kartalar", label: "Flashcards", code: "12" },
+  { href: "/admin/videolar", label: "Video darslar", code: "13" },
+  { href: "/admin/muhokamalar", label: "Muhokamalar", code: "14" },
+  { href: "/admin/sertifikatlar", label: "Sertifikat va bot", code: "15" },
 ];
 
 function isActive(pathname: string | null, href: string): boolean {

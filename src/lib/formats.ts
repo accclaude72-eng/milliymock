@@ -269,8 +269,33 @@ function fortyTaskVersion(base: ExamFormat, id: string): ExamFormat {
       "Platforma formati: 40 ta topshiriq (1–32 yopiq test, 33–35 moslashtirish, 36–40 qisqa javob), 100 daqiqa. Yozma ish (41–43) kiritilmagan. Natija xom ball sifatida ko‘rsatiladi.",
   };
 }
+/**
+ * Diagnostic variant used by many training centres: 1–35 as usual, then 10 calculation
+ * problems with two parts each — every part (a, b) is its own short-answer task (36–55).
+ */
+function abVersion(base: ExamFormat, id: string): ExamFormat {
+  return {
+    ...base,
+    id,
+    version: "2026-ab",
+    label: `${base.subjectName} · diagnostika (10 ta a/b masala)`,
+    effectiveDate: "2026-11-28",
+    totalTasks: 55,
+    totalMinutes: 150,
+    sections: [{ id: "test", title: "Test topshiriqlari", from: 1, to: 55, minutes: 150 }],
+    taskGroups: [
+      { type: "Y1", from: 1, to: 32 },
+      { type: "Y2", from: 33, to: 35 },
+      { type: "O1", from: 36, to: 55 },
+    ],
+    o2Tasks: [],
+    assessmentNote:
+      "Diagnostik format: 1–32 yopiq test, 33–35 moslashtirish, 36–55 qisqa javob (har bir masalaning a va b qismlari alohida topshiriq), 150 daqiqa. Natija xom ball sifatida ko‘rsatiladi.",
+  };
+}
 DEFAULT_FORMATS.push(
   fortyTaskVersion(DEFAULT_FORMATS.find((f) => f.id === "biologiya-2025")!, "biologiya-2026"),
+  abVersion(DEFAULT_FORMATS.find((f) => f.id === "biologiya-2025")!, "biologiya-2026-ab"),
   fortyTaskVersion(DEFAULT_FORMATS.find((f) => f.id === "kimyo-2025")!, "kimyo-2026"),
   {
     id: "multilevel-2026",

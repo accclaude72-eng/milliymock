@@ -4,8 +4,9 @@ import { DISPLAY } from "@/lib/gamify";
 import { challengePool, pickQuestions } from "./challenges";
 import { grantXp, refreshAchievements } from "./gamification";
 import { ApiError } from "./http";
+import { notifyUser, siteBase } from "./notifications";
 import { bankRows, gradeBankAnswer } from "./question-bank";
-import { areFriends, displayName } from "./social";
+import { areFriends, displayName, displayNames } from "./social";
 import { must, sb } from "./supabase";
 
 export interface BattleRow {
@@ -147,6 +148,13 @@ export async function createBattle(uid: string, input: CreateInput): Promise<{ i
       "battle questions",
     );
     await addParticipant(b.id, uid);
+    if (b.mode === "friend" && b.invited_user) {
+      const base = siteBase();
+      await notifyUser(b.invited_user, "battle_invites", `battle:${b.id}`, `⚔ <b>${(await displayName(uid)).replace(/[<>&]/g, "")}</b> sizni 1v1 battle’ga chaqirdi! Taklif 10 daqiqa amal qiladi.`, {
+        urgent: true,
+        ...(base ? { buttons: [{ text: "Qabul qilish", url: `${base}/battle/${b.id}` }] } : {}),
+      });
+    }
     return { id: b.id, matched: false };
   }
   throw new ApiError(500, "code", "Battle yaratib bo‘lmadi. Qayta urinib ko‘ring.");
@@ -436,8 +444,7 @@ export async function myBattles(uid: string) {
       },
     ];
   });
-  const inviterNames = new Map<string, string>();
-  for (const b of inv) if (!inviterNames.has(b.created_by)) inviterNames.set(b.created_by, await displayName(b.created_by));
+  const inviterNames = await displayNames([...new Set(inv.map((b) => b.created_by))]); // one query for all inviters
   return {
     record: { wins, losses, draws },
     history,

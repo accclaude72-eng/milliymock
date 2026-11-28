@@ -36,9 +36,9 @@ Har bir bosqich o‘z migratsiyasi, kodi, testlari va brauzerda tekshiruvi bilan
 | **1 ✅** | Savollar bazasi, Xatolar daftari (1-3-7-14 kunlik takrorlash), Shaxsiy o‘quv reja, Kengaytirilgan analitika | `question_bank`, `student_mistakes`, `answer_events`, `study_plans`, `study_plan_tasks` |
 | **2 ✅** | Kunlik challenge, XP, yutuqlar, reyting | `daily_challenges`, `challenge_attempts`, `xp_ledger` (bitta mukofot faqat bir marta beriladi — unique cheklov), `student_achievements`, `leaderboard_settings` |
 | **3 ✅** | 1v1 Battle, do‘stlar va do‘stlar reytingi, O‘quv xonalari (Supabase Realtime) | `friendships`, `friend_codes`, `battles`, `battle_participants`, `battle_questions`, `battle_answers` (oxirgi ikkisi faqat server uchun), `study_rooms`, `study_room_members`, `study_room_messages` |
-| 4 | Flashcards (SM-2), Video darslar, Savol muhokamalari va moderatsiya | `flashcard_decks`, `flashcards`, `flashcard_reviews`, `video_lessons`, `video_progress`, `discussions`, `discussion_replies`, `discussion_reports` |
-| 5 | Mock sertifikatlar (PDF, QR, tekshirish sahifasi), Telegram bot (hisob ulash, buyruqlar, webhook) | `certificates`, `certificate_checks`, `telegram_links`, `notification_prefs`, `notification_log` |
-| 6 | PWA va offline o‘qish, nomzod dashboardini qayta loyihalash, admin panelni kengaytirish, yakuniy optimizatsiya | — |
+| **4 ✅** | Flashcards (SM-2), Video darslar, Savol muhokamalari va moderatsiya | `flashcard_decks`, `flashcards`, `flashcard_reviews`, `video_lessons`, `video_progress`, `discussions`, `discussion_replies`, `discussion_reports` |
+| **5 ✅** | Mock sertifikatlar (PDF, QR, tekshirish sahifasi), Telegram bot (hisob ulash, buyruqlar, webhook, ertalabki eslatma) | `certificates`, `certificate_checks`, `telegram_links`, `telegram_link_codes`, `notification_prefs`, `notification_log` |
+| **6 ✅** | PWA va offline o‘qish, nomzod dashboardini qayta loyihalash, admin panelni kengaytirish, yakuniy optimizatsiya | — |
 
 ## 3. 1-bosqich tafsilotlari (bajarildi, 2026-11-28)
 
@@ -87,7 +87,79 @@ Har bir bosqich o‘z migratsiyasi, kodi, testlari va brauzerda tekshiruvi bilan
   - Moderatsiya: xonani yoki xabarni yashirish va qaytarish. Har bir amal audit jurnaliga yoziladi.
 - **Realtime.** Raqibning holati, battle boshlanishi va yangi xabarlar Supabase Realtime orqali keladi, RLS bunda ham amal qiladi. Ulanish uzilsa, sahifa o‘zi qayta so‘rov yuborib turadi.
 
-## 5. Cheklovlar va tashqi sozlamalar
+## 5. 4-bosqich tafsilotlari (bajarildi, 2026-11-28)
+
+- **Flashcards** (`/kartalar`)
+  - SM-2 algoritmi: “Qayta / Qiyin / Yaxshi / Oson” tugmalari, har birida keyingi takrorlash muddati ko‘rsatiladi. Klaviatura bilan ham ishlaydi: Probel — kartani ochish, 1–4 — baho.
+  - Har bir to‘plamdan kuniga ko‘pi bilan 20 ta yangi karta beriladi. Takrorlash holati faqat nomzodning o‘ziga ko‘rinadi.
+  - To‘plam turlari:
+    - nomzodning o‘z to‘plamlari — ommaviy qo‘shish mumkin (har qatorda “savol | javob”);
+    - rasmiy to‘plamlar — admin yaratadi, e’lon qilingach hammaga ko‘rinadi;
+    - “Xatolarim” — xatolar daftaridan avtomatik tuziladi (faqat javoblari ochiq testlardan); hal qilingan xato to‘plamdan chiqadi.
+- **Video darslar** (`/videolar`)
+  - Video saytga yuklanmaydi: admin YouTube yoki Vimeo havolasini qo‘shadi. Pleyer `youtube-nocookie` orqali ochiladi.
+  - Darslar fan va mavzu bo‘yicha guruhlanadi, nomzod “Ko‘rdim” deb belgilaydi.
+  - Admin darsni qoralama, e’lon qilingan yoki arxiv holatiga o‘tkazadi va har bir darsni nechta nomzod ko‘rganini kuzatadi.
+- **Savol muhokamalari** (`/muhokama/[savol]`, xatolar daftaridan havola)
+  - Javoblar oshkor bo‘lmasligi uchun muhokama faqat shu savolga javob bergan nomzodga ochiladi.
+  - Imkoniyatlar:
+    - mavzu ochish va unga javob yozish;
+    - “Foydali” ovozi (o‘z xabariga ovoz berib bo‘lmaydi);
+    - o‘z xabarini 30 daqiqa ichida tahrirlash va o‘chirish;
+    - shikoyat qilish (bitta nomzod bitta xabarga bir marta).
+  - Admin moderatsiyasi: xabarni yashirish yoki qaytarish, shikoyatni rad etish. Har bir amal audit jurnaliga yoziladi.
+- **Jadvallar va RLS.** Kontent jadvallarini faqat server o‘qiydi. Nomzod faqat o‘z takrorlash holatini, video progressini va ovozlarini ko‘radi.
+- **Biologiya testlari.** Diagnostik format `biologiya-2026-ab` qo‘shildi: 36–55-topshiriqlar 10 ta masalaning a) va b) qismlari. Admin material yaratishda fanning boshqa format versiyasini tanlay oladi. Uchta yangi test qoralama sifatida yuklandi.
+
+## 6. 5-bosqich tafsilotlari (bajarildi, 2026-11-28)
+
+- **Sertifikatlar** (`/kabinet/sertifikatlar`)
+  - Faqat e’lon qilingan **to‘liq** mock natijasiga beriladi. Har bir urinish uchun bitta sertifikat — parallel so‘rovlarda ham.
+  - PDF (A4) so‘rov bo‘yicha yaratiladi va hech qayerda saqlanmaydi. Unda quyidagilar bor:
+    - seriya `MM-YYYY-XXXXXX`;
+    - xom ball va “platforma bahosi”;
+    - tekshirish sahifasiga olib boradigan QR kod;
+    - “rasmiy davlat sertifikati emas” degan ogohlantirish.
+- **Ochiq tekshirish** (`/sertifikat/[kod]`, kirishsiz)
+  - Ism qisqartiriladi (“Shohrux M.”). Email va Candidate ID ko‘rsatilmaydi.
+  - Har bir tekshiruv jurnalga yoziladi (IP faqat xesh ko‘rinishida). Bir IP’dan soatiga ko‘pi bilan 60 ta tekshiruv.
+- **Bekor qilish**
+  - Admin natijani qayta tekshiruvga olsa, sertifikat avtomatik bekor bo‘ladi.
+  - Admin sertifikatni sabab yozib bekor qilishi yoki tiklashi mumkin; har bir amal audit jurnaliga yoziladi.
+- **Telegram bot**
+  - Hisobni ulash: Kabinet → Bildirishnomalar → “Telegramni ulash”. Bir martalik havola 15 daqiqa amal qiladi. Bitta Telegram chat faqat bitta hisobga ulanadi.
+  - Buyruqlar: /natija, /challenge, /reja, /xatolar, /xp, /sertifikat, /sozlamalar, /uzish, /yordam.
+  - Webhook faqat `TELEGRAM_WEBHOOK_SECRET` bilan qabul qilinadi.
+- **Bildirishnomalar**
+  - Qachon keladi: natija e’lon qilinganda, sertifikat tayyor bo‘lganda, do‘st battle’ga chaqirganda va har kuni ertalab 08:00 da (Vercel Cron, `CRON_SECRET`) — challenge, reja va xatolar haqida.
+  - Nomzod xabar turlarini va “jim soatlar”ni o‘zi sozlaydi.
+  - Har bir xabar faqat bir marta yuboriladi. Botni bloklagan nomzodning ulanishi o‘zi uziladi.
+- **Kerakli env o‘zgaruvchilari (Vercel)**
+  - `TELEGRAM_BOT_TOKEN` — allaqachon bor.
+  - `TELEGRAM_WEBHOOK_SECRET` — yangi.
+  - `CRON_SECRET` — yangi.
+  - Kiritgach, admin → “Sertifikat va bot” sahifasida “Webhookni o‘rnatish” tugmasi bosiladi.
+
+## 7. 6-bosqich tafsilotlari (bajarildi, 2026-11-28)
+
+- **PWA**
+  - Saytni telefon yoki kompyuterga ilova sifatida o‘rnatish mumkin. Uning manifesti, ikonkalari (maskable ham) va tezkor havolalari bor: Challenge, Flashcards, Xatolar.
+  - Kabinetda “Ilovani o‘rnatish” tugmasi bor.
+- **Oflayn ishlash** (`public/sw.js`)
+  - Avval ochilgan sahifalar internetsiz ham ochiladi.
+  - Ochilmagan sahifa so‘ralsa, `/offline` sahifasi ko‘rsatiladi.
+  - Quyidagilar **hech qachon** keshlanmaydi: `/api`, admin panel, imtihon, challenge va battle sahifalari.
+  - Internet yo‘qligida sahifa tepasida banner chiqadi.
+- **Oflayn flashcards**
+  - To‘plamni “Oflayn uchun saqlash” mumkin; u qurilmada `/kartalar/oflayn` sahifasida takrorlanadi.
+  - Oflayn baholar navbatga yoziladi va internet qaytganda serverga yuboriladi. Tarmoq xatosida navbatda qoladi, o‘chirilgan karta esa tashlab yuboriladi.
+- **Nomzod dashboardi.** Yangi “Bugun” bloki: streak, XP, bugungi challenge, reja, takrorlanadigan xatolar va kartalar, battle takliflari, tezkor havolalar. Hammasi bitta API so‘rovida, parallel o‘qiladi.
+- **Admin bosh sahifasi**
+  - “Diqqat talab qiladi”: tekshiruv navbati, to‘lovlar, shikoyatlar, shubhali urinishlar va qoralamalar soni.
+  - Barcha o‘quv modullari bo‘yicha 7 kunlik faollik.
+- **Optimizatsiya.** Battle takliflarida ismlar endi bitta so‘rovda olinadi. Dashboard yig‘ma API’si `/api/me/dashboard`, admin uchun esa `/api/admin/overview`.
+
+## 8. Cheklovlar va tashqi sozlamalar
 
 - **Realtime (3-bosqich).** Supabase Realtime (`postgres_changes`) RLS bilan ishlatiladi. Ballni faqat server hisoblaydi. Kim onlayn ekani har 20 soniyada yangilanib turadi.
 - **Video.** Katta fayllar Vercel’da saqlanmaydi. YouTube yoki Vimeo havolalari, yoki Supabase Storage ishlatiladi.

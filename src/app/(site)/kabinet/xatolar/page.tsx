@@ -107,6 +107,9 @@ function Card({ it, onPatch }: { it: Item; onPatch: (id: number, p: Partial<Pick
             Qayta yechish
           </Link>
         )}
+        <Link href={`/muhokama/${encodeURIComponent(it.question.id)}`} className="btn btn-sm">
+          💬 Muhokama
+        </Link>
         {it.status === "open" && (
           <button type="button" className="btn btn-sm" disabled={busy} onClick={() => save({ status: "understood" })}>
             ✓ Tushundim
